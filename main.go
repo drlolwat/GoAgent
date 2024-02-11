@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"crypto/aes"
+	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -36,21 +38,21 @@ func sendPacket(conn net.Conn, header string, data string) {
 	}
 }
 
-func parseHeader(reader *bufio.Reader, conn net.Conn) error {
+func parsePacket(reader *bufio.Reader) (string, string, error) {
 	lengthBytes := make([]byte, 4)
 	_, err := reader.Read(lengthBytes)
 	if err != nil {
 		if err == io.EOF {
-			return errors.New("connection closed by peer")
+			return "", "", errors.New("connection closed by peer")
 		}
-		return err
+		return "", "", err
 	}
 
 	length := binary.BigEndian.Uint32(lengthBytes)
 
 	header, err := reader.ReadString('\r')
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	header = strings.Trim(header, "\r")
 
@@ -58,30 +60,95 @@ func parseHeader(reader *bufio.Reader, conn net.Conn) error {
 	dataBytes := make([]byte, dataLength)
 	_, err = reader.Read(dataBytes)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
 	data := strings.Trim(string(dataBytes), "\x00")
 
-	if handler, ok := handlers[header]; ok {
-		return handler(conn, data)
+	return header, data, nil
+}
+
+func parseEncryptedPacket(reader *bufio.Reader) (string, string, error) {
+	lengthBytes := make([]byte, 4)
+	_, err := reader.Read(lengthBytes)
+	if err != nil {
+		if err == io.EOF {
+			return "", "", errors.New("connection closed by peer")
+		}
+		return "", "", err
 	}
 
-	log.Printf("Unknown packet: Header: \"%s\", Data: \"%s\"\n", header, data)
-	return nil
+	encoded, err := reader.ReadString('\n')
+	if err != nil {
+		return "", "", err
+	}
+	encoded = strings.Trim(encoded, "\n")
+
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", "", err
+	}
+
+	key, err := generateKey(CLIENT_KEY)
+	if err != nil {
+		return "", "", err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", "", err
+	}
+
+	decrypter := NewECBDecrypter(block)
+	decryptedText := make([]byte, len(decoded))
+	decrypter.CryptBlocks(decryptedText, decoded)
+
+	finalText := pKCS5Unpadding(decryptedText)
+
+	header, data := splitPacketData(string(finalText))
+
+	data = strings.Trim(data, "\x00")
+
+	return header, data, nil
+}
+
+func splitPacketData(data string) (string, string) {
+	parts := strings.SplitN(data, "\r", 2)
+	if len(parts) != 2 {
+		return "", ""
+	}
+	return parts[0], parts[1]
 }
 
 func handleData(conn net.Conn) {
 	reader := bufio.NewReader(conn)
+
 	for {
+		var header, data string
+		var err error
 		if CUSTOMER_ID != nil {
-			// todo: create new reader with decrypted contents
+			header, data, err = parseEncryptedPacket(reader)
+		} else {
+			header, data, err = parsePacket(reader)
 		}
-		err := parseHeader(reader, conn)
 		if err != nil {
 			log.Println(err)
 			return
 		}
+
+		if _, ok := handlers[header]; !ok {
+			log.Printf("Unknown packet: Header: \"%s\", Data: \"%s\"\n", header, data)
+			continue
+		}
+
+		log.Printf("Header: \"%s\", Data: \"%s\"\n", header, data)
+
+		err = handlers[header](conn, data)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
 	}
 }
 
