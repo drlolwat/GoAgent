@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -56,6 +58,7 @@ func handleData(conn net.Conn) {
 			log.Println(err)
 			return
 		}
+		header = strings.Trim(header, "\r")
 
 		// Calculate the length of the data
 		dataLength := length - uint32(len(header))
@@ -68,8 +71,24 @@ func handleData(conn net.Conn) {
 			return
 		}
 
-		fmt.Println("Received header: " + header)
-		fmt.Println("Received data: " + string(dataBytes))
+		data := strings.Trim(string(dataBytes), "\x00")
+
+		log.Println("Received header: " + header)
+		log.Println("Received data: " + data)
+
+		switch header {
+		case "initHandshake":
+			sendPacket(conn, "initHandshake", fmt.Sprintf("{\"machineId\":\"%s\"}", CLIENT_UUID))
+			break
+		case "handshakeOk":
+			customerId, err := strconv.Atoi(data)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			CUSTOMER_ID = &customerId
+			break
+		}
 	}
 }
 func main() {
@@ -90,8 +109,6 @@ func main() {
 	}
 
 	go handleData(conn)
-
-	sendPacket(conn, "initHandshake", "123")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
