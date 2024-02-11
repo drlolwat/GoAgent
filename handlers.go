@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net"
 	"strconv"
@@ -12,9 +13,10 @@ var handlers handlerMap
 
 func init() {
 	handlers = handlerMap{
-		"initHandshake": initHandshake,
-		"handshakeOk":   handshakeOk,
-		"ping":          ping,
+		"initHandshake":   initHandshake,
+		"handshakeOk":     handshakeOk,
+		"ping":            ping,
+		"listRunningBots": listRunningBots,
 	}
 }
 
@@ -34,5 +36,20 @@ func handshakeOk(conn net.Conn, data string) error {
 
 func ping(conn net.Conn, data string) error {
 	log.Println("Heartbeat received")
+	return nil
+}
+
+type RunningBots map[string][]string
+
+func listRunningBots(conn net.Conn, data string) error {
+	// todo: track all running accounts and list them here
+	runningBots := RunningBots{
+		"agent_uuid_here": []string{"account_id_here", "another_account_id_here"},
+	}
+	runningBotsJson, _ := json.Marshal(runningBots)
+
+	log.Println("Sending list of running bots")
+
+	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	return nil
 }
