@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/hex"
@@ -15,6 +16,30 @@ func newECB(block cipher.Block) *ecb {
 	return &ecb{
 		block:     block,
 		blockSize: block.BlockSize(),
+	}
+}
+
+type ecbEncrypter ecb
+
+func NewECBEncrypter(b cipher.Block) cipher.BlockMode {
+	return (*ecbEncrypter)(newECB(b))
+}
+
+func (encrypter *ecbEncrypter) BlockSize() int {
+	return encrypter.blockSize
+}
+
+func (encrypter *ecbEncrypter) CryptBlocks(dst, src []byte) {
+	if len(src)%encrypter.blockSize != 0 {
+		panic("crypto/cipher: input not full blocks")
+	}
+	if len(dst) < len(src) {
+		panic("crypto/cipher: output smaller than input")
+	}
+	for len(src) > 0 {
+		encrypter.block.Encrypt(dst, src[:encrypter.blockSize])
+		src = src[encrypter.blockSize:]
+		dst = dst[encrypter.blockSize:]
 	}
 }
 
@@ -40,6 +65,12 @@ func (decrypter *ecbDecrypter) CryptBlocks(dst, src []byte) {
 		src = src[decrypter.blockSize:]
 		dst = dst[decrypter.blockSize:]
 	}
+}
+
+func pKCS5Padding(ciphertext []byte, blockSize int) []byte {
+	padding := blockSize - len(ciphertext)%blockSize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(ciphertext, padtext...)
 }
 
 func pKCS5Unpadding(origData []byte) []byte {
