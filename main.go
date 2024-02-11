@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -23,74 +25,81 @@ var (
 )
 
 func sendPacket(conn net.Conn, header string, data string) {
-	// Combine the header and data with a '\r' separator
 	packet := header + "\r" + data
 
-	// Prepare the length field
 	length := uint32(len(packet))
 	lengthBytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(lengthBytes, length)
 
-	// Send the length field and the packet
 	_, err := conn.Write(append(lengthBytes, []byte(packet)...))
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
+func parseHeader(reader *bufio.Reader, conn net.Conn) error {
+	lengthBytes := make([]byte, 4)
+	_, err := reader.Read(lengthBytes)
+	if err != nil {
+		if err == io.EOF {
+			return errors.New("connection closed by peer")
+		}
+		return err
+	}
+
+	length := binary.BigEndian.Uint32(lengthBytes)
+
+	header, err := reader.ReadString('\r')
+	if err != nil {
+		return err
+	}
+	header = strings.Trim(header, "\r")
+
+	dataLength := length - uint32(len(header))
+	dataBytes := make([]byte, dataLength)
+	_, err = reader.Read(dataBytes)
+	if err != nil {
+		return err
+	}
+
+	data := strings.Trim(string(dataBytes), "\x00")
+
+	switch header {
+	case "initHandshake":
+		sendPacket(conn, "initHandshake", fmt.Sprintf("{\"machineId\":\"%s\"}", CLIENT_UUID))
+		break
+	case "handshakeOk":
+		customerId, err := strconv.Atoi(data)
+		if err != nil {
+			return err
+		}
+		CUSTOMER_ID = &customerId
+		break
+	case "ping":
+		log.Println("Heartbeat received")
+		break
+	default:
+		log.Printf("Unknown packet: Header: \"%s\", Data: \"%s\"\n", header, data)
+		break
+	}
+
+	return nil
+}
+
 func handleData(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	for {
-		// Read the length field (4 bytes)
-		lengthBytes := make([]byte, 4)
-		_, err := reader.Read(lengthBytes)
+		if CUSTOMER_ID != nil {
+			// todo: create new reader with decrypted contents
+		}
+		err := parseHeader(reader, conn)
 		if err != nil {
 			log.Println(err)
 			return
-		}
-
-		// Convert the length field to int
-		length := binary.BigEndian.Uint32(lengthBytes)
-
-		// Read the header until the '\r' separator
-		header, err := reader.ReadString('\r')
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		header = strings.Trim(header, "\r")
-
-		// Calculate the length of the data
-		dataLength := length - uint32(len(header))
-
-		// Read the data
-		dataBytes := make([]byte, dataLength)
-		_, err = reader.Read(dataBytes)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		data := strings.Trim(string(dataBytes), "\x00")
-
-		log.Println("Received header: " + header)
-		log.Println("Received data: " + data)
-
-		switch header {
-		case "initHandshake":
-			sendPacket(conn, "initHandshake", fmt.Sprintf("{\"machineId\":\"%s\"}", CLIENT_UUID))
-			break
-		case "handshakeOk":
-			customerId, err := strconv.Atoi(data)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			CUSTOMER_ID = &customerId
-			break
 		}
 	}
 }
+
 func main() {
 	fmt.Println("    ____        __  ____            __    __     ")
 	fmt.Println("   / __ )____  / /_/ __ )__  ______/ /___/ /_  __")
@@ -107,12 +116,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer conn.Close()
 
 	go handleData(conn)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
-
-	conn.Close()
 }
