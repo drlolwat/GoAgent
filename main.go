@@ -19,6 +19,8 @@ var (
 	DIST_URL    = "https://botbuddy.net/dist"
 )
 
+var Conn net.Conn
+
 func handleData(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
@@ -64,13 +66,12 @@ func main() {
 	fmt.Println("Developed by the team at https://botbuddy.net")
 	fmt.Println()
 
-	conn, err := net.Dial("tcp", "127.0.0.1:7888")
+	Conn, err := net.Dial("tcp", "127.0.0.1:7888")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
 
-	go handleData(conn)
+	go handleData(Conn)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
