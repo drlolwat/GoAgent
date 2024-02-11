@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 )
@@ -64,25 +63,11 @@ func parseHeader(reader *bufio.Reader, conn net.Conn) error {
 
 	data := strings.Trim(string(dataBytes), "\x00")
 
-	switch header {
-	case "initHandshake":
-		sendPacket(conn, "initHandshake", fmt.Sprintf("{\"machineId\":\"%s\"}", CLIENT_UUID))
-		break
-	case "handshakeOk":
-		customerId, err := strconv.Atoi(data)
-		if err != nil {
-			return err
-		}
-		CUSTOMER_ID = &customerId
-		break
-	case "ping":
-		log.Println("Heartbeat received")
-		break
-	default:
-		log.Printf("Unknown packet: Header: \"%s\", Data: \"%s\"\n", header, data)
-		break
+	if handler, ok := handlers[header]; ok {
+		return handler(conn, data)
 	}
 
+	log.Printf("Unknown packet: Header: \"%s\", Data: \"%s\"\n", header, data)
 	return nil
 }
 
