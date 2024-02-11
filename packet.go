@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -86,6 +87,36 @@ func parseEncryptedPacket(reader *bufio.Reader) (*Packet, error) {
 	data = strings.Trim(data, "\x00")
 
 	return &Packet{Header: header, Data: data}, nil
+}
+
+func sendEncryptedPacket(conn net.Conn, header string, data string) {
+	key, err := generateKey(CLIENT_KEY)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	plaintext := []byte(fmt.Sprintf("%s\r%s", header, data))
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	paddedText := pKCS5Padding(plaintext, block.BlockSize())
+
+	encrypter := NewECBEncrypter(block)
+	ciphertext := make([]byte, len(paddedText))
+	encrypter.CryptBlocks(ciphertext, paddedText)
+
+	ciphertextEncoded := base64.StdEncoding.EncodeToString(ciphertext)
+
+	length := uint32(len(ciphertextEncoded))
+	lengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(lengthBytes, length)
+
+	_, err = conn.Write(append(lengthBytes, []byte(ciphertextEncoded)...))
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func sendPacket(conn net.Conn, header string, data string) {
