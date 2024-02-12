@@ -54,3 +54,9 @@ func killProcess(pid int) {
 		return
 	}
 }
+
+func ChangeClientStatus(internalId int, newStatus string) {
+	if client, exists := clients[internalId]; exists {
+		client.Status = newStatus
+	}
+}
