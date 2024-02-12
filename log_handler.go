@@ -120,9 +120,13 @@ func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string,
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ".")
-	ChangeClientStatus(internalId, "NoScript")
-	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"NoScript"}`, internalId))
+
+	if GetClientUptime(internalId) >= 30 {
+		log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ".")
+		ChangeClientStatus(internalId, "NoScript")
+		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"NoScript"}`, internalId))
+	}
+
 	return nil
 }
 
