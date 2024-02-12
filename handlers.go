@@ -42,6 +42,10 @@ func handshakeOk(conn net.Conn, data string) error {
 		return err
 	}
 	CUSTOMER_ID = &customerId
+	if *CUSTOMER_ID > 0 {
+		log.Println(Green + "Connected to BotBuddy network." + Reset)
+	}
+
 	return nil
 }
 
@@ -61,9 +65,6 @@ func listRunningBots(conn net.Conn, data string) error {
 	}
 
 	runningBotsJson, _ := json.Marshal(runningBots)
-
-	log.Println("Heartbeat sent to BotBuddy network.")
-
 	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	return nil
 }
@@ -112,13 +113,25 @@ func downloadWrapper(scriptsFolder string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 
 	out, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+
+	defer func(out *os.File) {
+		err := out.Close()
+		if err != nil {
+
+		}
+	}(out)
 
 	_, err = io.Copy(out, resp.Body)
 	return err
@@ -130,8 +143,6 @@ func startBot(conn net.Conn, data string) error {
 	if err != nil {
 		return err
 	}
-
-	log.Println(args)
 
 	if !wrapperExists(args.ScriptsLocation) {
 		err = downloadWrapper(args.ScriptsLocation)
@@ -206,8 +217,8 @@ func startBot(conn net.Conn, data string) error {
 		}
 
 		pid := cmd.Process.Pid
-		client := NewClient(pid, args.InternalId, "Running")
-		log.Println("Started account ", args.AccountUsername, "with PID", client.Pid)
+		_ = NewClient(pid, args.InternalId, "Running")
+		log.Println("Starting client for", args.AccountUsername)
 
 		reader := bufio.NewReader(stdout)
 
@@ -232,12 +243,7 @@ func startBot(conn net.Conn, data string) error {
 			}
 		}
 
-		err = cmd.Wait()
-		if err != nil {
-			fmt.Println("Error waiting for Cmd", err)
-			return
-		}
-
+		_ = cmd.Wait()
 		RemoveClientByInternalId(args.InternalId)
 		sendProcessExitNotification(conn, args.InternalId, args.AccountUsername)
 	}()
