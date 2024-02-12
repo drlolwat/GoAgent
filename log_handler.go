@@ -14,7 +14,7 @@ type logHandler []LogEvent
 
 var logHandlers logHandler
 
-var completedLast int64 = 0
+var completedLast map[int]int64 = make(map[int]int64)
 
 func init() {
 	logHandlers = append(logHandlers,
@@ -96,10 +96,11 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 		return errors.New("was not connected to BotBuddy network")
 	}
 
-	if completedLast == 0 || time.Now().Unix()-completedLast >= 1 {
+	lastCompleted, exists := completedLast[internalId]
+	if !exists || time.Now().Unix()-lastCompleted >= 1 {
 		log.Println(loginName + " has been detected as " + Green + "completed" + Reset + ".")
 		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Completed"}`, internalId))
-		completedLast = time.Now().Unix()
+		completedLast[internalId] = time.Now().Unix()
 	}
 
 	return nil
