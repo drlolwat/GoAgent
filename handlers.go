@@ -223,8 +223,7 @@ func stopBot(conn net.Conn, data string) error {
 	log.Println("Stopping account ID", args.InternalId)
 
 	if _, ok := clients[args.InternalId]; ok {
-		delete(clients, args.InternalId)
-		// todo: stop the client jar
+		StopBotByInternalId(args.InternalId)
 	}
 
 	return nil
