@@ -18,8 +18,6 @@ var (
 	DIST_URL    = "https://botbuddy.net/dist"
 )
 
-var Conn net.Conn
-
 func handleData(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
@@ -43,7 +41,7 @@ func handleData(conn net.Conn) {
 			continue
 		}
 
-		log.Printf("Header: \"%s\", Data: \"%s\"\n", header, data)
+		//log.Printf("Header: \"%s\", Data: \"%s\"\n", header, data)
 
 		err = handlers[header](conn, data)
 		if err != nil {
@@ -65,12 +63,12 @@ func main() {
 	fmt.Println("Developed by the team at https://botbuddy.net")
 	fmt.Println()
 
-	Conn, err := net.Dial("tcp", "bbaas.botbuddy.net:7888")
+	conn, err := net.Dial("tcp", "bbaas.botbuddy.net:7888")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	go handleData(Conn)
+	go handleData(conn)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

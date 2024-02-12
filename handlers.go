@@ -62,8 +62,7 @@ func listRunningBots(conn net.Conn, data string) error {
 
 	runningBotsJson, _ := json.Marshal(runningBots)
 
-	log.Println("Sending list of running bots")
-	log.Println(string(runningBotsJson))
+	log.Println("Heartbeat sent to BotBuddy network.")
 
 	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	return nil
@@ -219,13 +218,13 @@ func startBot(conn net.Conn, data string) error {
 			}
 
 			line = strings.Trim(line, "\n")
-			fmt.Println(line)
 
-			if len(logHandlers) != 0 {
+			if len(logHandlers) > 0 {
 				for _, l := range logHandlers {
 					if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) {
-						err := l.action.execute(args.InternalId, args.AccountUsername, line)
+						err := l.action.execute(conn, args.InternalId, args.AccountUsername, line)
 						if err != nil {
+							log.Println(err)
 							continue
 						}
 					}
@@ -240,18 +239,18 @@ func startBot(conn net.Conn, data string) error {
 		}
 
 		RemoveClientByInternalId(args.InternalId)
-		sendProcessExitNotification(args.InternalId, args.AccountUsername)
+		sendProcessExitNotification(conn, args.InternalId, args.AccountUsername)
 	}()
 
 	return nil
 }
 
-func sendProcessExitNotification(internalId int, loginName string) {
-	if Conn != nil {
+func sendProcessExitNotification(conn net.Conn, internalId int, loginName string) {
+	if conn != nil {
 		err := ReportBotStatus{
 			online:       false,
 			proxyBlocked: false,
-		}.execute(internalId, loginName, "")
+		}.execute(conn, internalId, loginName, "")
 
 		if err != nil {
 			log.Println(err)
@@ -269,8 +268,6 @@ func stopBot(conn net.Conn, data string) error {
 	if err != nil {
 		return err
 	}
-
-	log.Println("Stopping account ID", args.InternalId)
 
 	if _, ok := clients[args.InternalId]; ok {
 		StopBotByInternalId(args.InternalId)
