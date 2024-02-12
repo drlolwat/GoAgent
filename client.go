@@ -4,12 +4,14 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"time"
 )
 
 type Client struct {
 	Pid        int
 	InternalId int
 	Status     string
+	StartedAt  int64
 }
 
 var clients = make(map[int]*Client)
@@ -19,6 +21,7 @@ func NewClient(pid int, internalId int, status string) *Client {
 		Pid:        pid,
 		InternalId: internalId,
 		Status:     status,
+		StartedAt:  time.Now().Unix(),
 	}
 
 	clients[internalId] = client
@@ -59,4 +62,11 @@ func ChangeClientStatus(internalId int, newStatus string) {
 	if client, exists := clients[internalId]; exists {
 		client.Status = newStatus
 	}
+}
+
+func GetClientUptime(internalId int) int64 {
+	if client, exists := clients[internalId]; exists {
+		return time.Now().Unix() - client.StartedAt
+	}
+	return -1
 }
