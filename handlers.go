@@ -65,7 +65,6 @@ func listRunningBots(conn net.Conn, data string) error {
 	}
 
 	runningBotsJson, _ := json.Marshal(runningBots)
-	fmt.Println(string(runningBotsJson))
 	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	return nil
 }
