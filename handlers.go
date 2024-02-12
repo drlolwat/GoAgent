@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -87,11 +88,12 @@ func startBot(conn net.Conn, data string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(args)
 
-	log.Println("Starting account ID", args.InternalId)
+	log.Println(args)
 
-	clients[args.InternalId] = &struct{}{}
+	if IsClientRunning(args.InternalId) {
+		return errors.New("Client is already running for " + args.AccountUsername)
+	}
 
 	go func() {
 		cmdArgs := []string{
@@ -155,8 +157,8 @@ func startBot(conn net.Conn, data string) error {
 		}
 
 		pid := cmd.Process.Pid
-		fmt.Println(pid)
-		//pids[pid] = internalId
+		client := NewClient(pid, args.InternalId, "Running")
+		log.Println("Started account ", args.AccountUsername, "with PID", client.Pid)
 
 		reader := bufio.NewReader(stdout)
 
@@ -179,14 +181,6 @@ func startBot(conn net.Conn, data string) error {
 					}
 				}
 			}
-
-			/*if len(logEvents) != 0 {
-				for _, l := range logEvents {
-					if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor())) {
-						//l.action().execute(internalId, login, line)
-					}
-				}
-			}*/
 		}
 
 		err = cmd.Wait()
@@ -195,11 +189,24 @@ func startBot(conn net.Conn, data string) error {
 			return
 		}
 
-		//sendProcessExitNotification(internalId, login)
-		//delete(pids, pid)
+		RemoveClientByInternalId(args.InternalId)
+		sendProcessExitNotification(args.InternalId, args.AccountUsername)
 	}()
 
 	return nil
+}
+
+func sendProcessExitNotification(internalId int, loginName string) {
+	if Conn != nil {
+		err := ReportBotStatus{
+			online:       false,
+			proxyBlocked: false,
+		}.execute(internalId, loginName, "")
+
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 type stopBotData struct {
