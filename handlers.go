@@ -8,7 +8,10 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -43,20 +46,24 @@ func handshakeOk(conn net.Conn, data string) error {
 }
 
 func ping(conn net.Conn, data string) error {
-	log.Println("Heartbeat received")
 	return nil
 }
 
 func listRunningBots(conn net.Conn, data string) error {
-	runningBots := make(map[string]map[int]string)
+	runningBots := make(map[string][]map[string]string)
 
-	for _, client := range clients {
-		runningBots[CLIENT_UUID] = map[int]string{client.InternalId: client.Status}
+	if len(clients) == 0 {
+		runningBots[CLIENT_UUID] = []map[string]string{}
+	} else {
+		for _, client := range clients {
+			runningBots[CLIENT_UUID] = append(runningBots[CLIENT_UUID], map[string]string{"internalId": strconv.Itoa(client.InternalId), "status": client.Status})
+		}
 	}
 
 	runningBotsJson, _ := json.Marshal(runningBots)
 
 	log.Println("Sending list of running bots")
+	log.Println(string(runningBotsJson))
 
 	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	return nil
@@ -82,6 +89,42 @@ type startBotData struct {
 	World           string `json:"world"`
 }
 
+func wrapperExists(scriptsFolder string) bool {
+	filePath := filepath.Join(scriptsFolder, WRAPPER_JAR)
+	_, err := os.Stat(filePath)
+	return !os.IsNotExist(err)
+}
+
+func downloadWrapper(scriptsFolder string) error {
+	log.Println("Downloading BotBuddy wrapper...")
+	filePath := filepath.Join(scriptsFolder, WRAPPER_JAR)
+
+	// If the file exists, delete it
+	if _, err := os.Stat(filePath); err == nil {
+		err = os.Remove(filePath)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Download the file
+	url := DIST_URL + "/" + WRAPPER_JAR
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
 func startBot(conn net.Conn, data string) error {
 	var args startBotData
 	err := json.Unmarshal([]byte(data), &args)
@@ -90,6 +133,13 @@ func startBot(conn net.Conn, data string) error {
 	}
 
 	log.Println(args)
+
+	if !wrapperExists(args.ScriptsLocation) {
+		err = downloadWrapper(args.ScriptsLocation)
+		if err != nil {
+			return err
+		}
+	}
 
 	if IsClientRunning(args.InternalId) {
 		return errors.New("Client is already running for " + args.AccountUsername)
