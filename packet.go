@@ -90,6 +90,10 @@ func parseEncryptedPacket(reader *bufio.Reader) (*Packet, error) {
 }
 
 func sendEncryptedPacket(conn net.Conn, header string, data string) {
+	if conn == nil {
+		fmt.Println(Red + "was not connected to BotBuddy network" + Reset)
+		return
+	}
 	key, err := generateKey(CLIENT_KEY)
 	if err != nil {
 		log.Fatal(err)
