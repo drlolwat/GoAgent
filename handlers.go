@@ -196,6 +196,11 @@ func startBot(conn net.Conn, data string) error {
 			}
 		}
 
+		if args.AccountTotp != "" {
+			cmdArgs = append(cmdArgs, "-newAccountSystem")
+			cmdArgs = append(cmdArgs, "-Totp", args.AccountTotp)
+		}
+
 		cmdArgs = append(cmdArgs, "-params", args.ScriptName)
 
 		if args.ScriptParams != "" {
