@@ -47,13 +47,13 @@ func ping(conn net.Conn, data string) error {
 	return nil
 }
 
-type RunningBots map[string][]string
-
 func listRunningBots(conn net.Conn, data string) error {
-	// todo: track all running accounts and list them here
-	runningBots := RunningBots{
-		"agent_uuid_here": []string{"account_id_here", "another_account_id_here"},
+	runningBots := make(map[string]map[int]string)
+
+	for _, client := range clients {
+		runningBots[CLIENT_UUID] = map[int]string{client.InternalId: client.Status}
 	}
+
 	runningBotsJson, _ := json.Marshal(runningBots)
 
 	log.Println("Sending list of running bots")
