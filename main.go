@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	CLIENT_UUID = "e8e32662-15f2-4070-9556-1e47fca35f37"
-	CLIENT_KEY  = "REDACTED"
+	CLIENT_UUID = "CLIENT_UUID_HERE"
+	CLIENT_KEY  = "CLIENT_KEY_HERE"
 	CUSTOMER_ID *int
 	WRAPPER_JAR = "BotBuddyWrapper-1.0-SNAPSHOT-dep-included.jar"
 	DIST_URL    = "https://botbuddy.net/dist"
