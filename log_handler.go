@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net"
 	"strings"
 )
 
@@ -32,7 +34,7 @@ type LogEvent struct {
 }
 
 type Action interface {
-	execute(internalId int, loginName string, logLine string) error
+	execute(conn net.Conn, internalId int, loginName string, logLine string) error
 }
 
 type ReportBotStatus struct {
@@ -40,21 +42,23 @@ type ReportBotStatus struct {
 	proxyBlocked bool
 }
 
-func (r ReportBotStatus) execute(internalId int, loginName string, logLine string) error {
-	if Conn == nil {
+func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
 
 	if r.proxyBlocked {
-		fmt.Println(loginName + " has been detected as using a blocked proxy.")
-		sendEncryptedPacket(Conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"ProxyBlocked"}`, internalId))
+		log.Println(loginName + " has been detected as using a blocked proxy.")
+		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"ProxyBlocked"}`, internalId))
 		return nil
 	}
 
 	if r.online {
-		sendEncryptedPacket(Conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Running"}`, internalId))
+		log.Println(loginName + " has been detected as running.")
+		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Running"}`, internalId))
 	} else {
-		sendEncryptedPacket(Conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Stopped"}`, internalId))
+		log.Println(loginName + " has been detected as stopped.")
+		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Stopped"}`, internalId))
 	}
 
 	return nil
@@ -62,51 +66,51 @@ func (r ReportBotStatus) execute(internalId int, loginName string, logLine strin
 
 type ReportBan struct{}
 
-func (r ReportBan) execute(internalId int, loginName string, logLine string) error {
-	if Conn == nil {
+func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	fmt.Println(loginName + " has been been detected as banned")
-	sendEncryptedPacket(Conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Banned"}`, internalId))
+	log.Println(loginName + " has been been detected as banned")
+	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Banned"}`, internalId))
 	return nil
 }
 
 type ReportLock struct{}
 
-func (r ReportLock) execute(internalId int, loginName string, logLine string) error {
-	if Conn == nil {
+func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	fmt.Println(loginName + " has been detected as locked")
-	sendEncryptedPacket(Conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Locked"}`, internalId))
+	log.Println(loginName + " has been detected as locked")
+	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Locked"}`, internalId))
 	return nil
 }
 
 type ReportCompleted struct{}
 
-func (r ReportCompleted) execute(internalId int, loginName string, logLine string) error {
-	if Conn == nil {
+func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	fmt.Println(loginName + " has been detected as completed")
-	sendEncryptedPacket(Conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Completed"}`, internalId))
+	log.Println(loginName + " has been detected as completed")
+	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Completed"}`, internalId))
 	return nil
 }
 
 type ReportNoScript struct{}
 
-func (r ReportNoScript) execute(internalId int, loginName string, logLine string) error {
-	if Conn == nil {
+func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	fmt.Println(loginName + " has been detected as running no script")
-	sendEncryptedPacket(Conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"NoScript"}`, internalId))
+	log.Println(loginName + " has been detected as running no script")
+	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"NoScript"}`, internalId))
 	return nil
 }
 
 type ReportWrapperData struct{}
 
-func (r ReportWrapperData) execute(internalId int, loginName string, logLine string) error {
+func (r ReportWrapperData) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
 	data := make(map[int]map[string]interface{})
 	innerMap := make(map[string]interface{})
 
@@ -132,7 +136,7 @@ func (r ReportWrapperData) execute(internalId int, loginName string, logLine str
 		return err
 	}
 
-	fmt.Println(send)
+	sendEncryptedPacket(conn, "wrapperData", string(send))
 
 	return nil
 }
