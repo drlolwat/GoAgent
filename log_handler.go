@@ -7,11 +7,14 @@ import (
 	"log"
 	"net"
 	"strings"
+	"time"
 )
 
 type logHandler []LogEvent
 
 var logHandlers logHandler
+
+var completedLast int64 = 0
 
 func init() {
 	logHandlers = append(logHandlers,
@@ -48,16 +51,16 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 	}
 
 	if r.proxyBlocked {
-		log.Println(loginName + " has been detected as using a blocked proxy.")
+		log.Println(loginName + " has been detected as having a " + Red + "blocked proxy" + Reset + ".")
 		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"ProxyBlocked"}`, internalId))
 		return nil
 	}
 
 	if r.online {
-		log.Println(loginName + " has been detected as running.")
+		log.Println(loginName + " has been detected as " + Green + "running" + Reset + ".")
 		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Running"}`, internalId))
 	} else {
-		log.Println(loginName + " has been detected as stopped.")
+		log.Println(loginName + " has been detected as " + Red + "stopped" + Reset + ".")
 		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Stopped"}`, internalId))
 	}
 
@@ -70,7 +73,7 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	log.Println(loginName + " has been been detected as banned")
+	log.Println(loginName + " has been been detected as " + Red + "banned" + Reset + ".")
 	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Banned"}`, internalId))
 	return nil
 }
@@ -81,7 +84,7 @@ func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, log
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	log.Println(loginName + " has been detected as locked")
+	log.Println(loginName + " has been detected as " + Red + "locked" + Reset + ".")
 	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Locked"}`, internalId))
 	return nil
 }
@@ -92,8 +95,13 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	log.Println(loginName + " has been detected as completed")
-	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Completed"}`, internalId))
+
+	if completedLast == 0 || time.Now().Unix()-completedLast >= 1 {
+		log.Println(loginName + " has been detected as " + Green + "completed" + Reset + ".")
+		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"Completed"}`, internalId))
+		completedLast = time.Now().Unix()
+	}
+
 	return nil
 }
 
@@ -103,7 +111,7 @@ func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string,
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-	log.Println(loginName + " has been detected as running no script")
+	log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ".")
 	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"status":"NoScript"}`, internalId))
 	return nil
 }

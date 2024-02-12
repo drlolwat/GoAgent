@@ -25,15 +25,6 @@ func NewClient(pid int, internalId int, status string) *Client {
 	return client
 }
 
-func RemoveClientByPid(pid int) {
-	for id, client := range clients {
-		if client.Pid == pid {
-			delete(clients, id)
-			break
-		}
-	}
-}
-
 func IsClientRunning(internalId int) bool {
 	_, exists := clients[internalId]
 	return exists
@@ -41,16 +32,6 @@ func IsClientRunning(internalId int) bool {
 
 func RemoveClientByInternalId(internalId int) {
 	delete(clients, internalId)
-}
-
-func StopBotByPid(pid int) {
-	for id, client := range clients {
-		if client.Pid == pid {
-			killProcess(pid)
-			delete(clients, id)
-			break
-		}
-	}
 }
 
 func StopBotByInternalId(internalId int) {
@@ -67,5 +48,9 @@ func killProcess(pid int) {
 	} else {
 		cmd = exec.Command("kill", "-9", strconv.Itoa(pid))
 	}
-	cmd.Run()
+
+	err := cmd.Run()
+	if err != nil {
+		return
+	}
 }

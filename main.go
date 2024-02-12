@@ -41,8 +41,6 @@ func handleData(conn net.Conn) {
 			continue
 		}
 
-		//log.Printf("Header: \"%s\", Data: \"%s\"\n", header, data)
-
 		err = handlers[header](conn, data)
 		if err != nil {
 			log.Println(err)
@@ -52,12 +50,12 @@ func handleData(conn net.Conn) {
 }
 
 func main() {
-	fmt.Println("    ____        __  ____            __    __     ")
+	fmt.Println(Blue + "    ____        __  ____            __    __     ")
 	fmt.Println("   / __ )____  / /_/ __ )__  ______/ /___/ /_  __")
 	fmt.Println("  / __  / __ \\/ __/ __  / / / / __  / __  / / / /")
 	fmt.Println(" / /_/ / /_/ / /_/ /_/ / /_/ / /_/ / /_/ / /_/ / ")
 	fmt.Println("/_____/\\____/\\__/_____/\\__,_/\\__,_/\\__,_/\\__, /  ")
-	fmt.Println("                                        /____/   ")
+	fmt.Println("                                        /____/   " + Reset)
 	fmt.Println()
 	fmt.Println("Welcome to BotBuddy version 3.")
 	fmt.Println("Developed by the team at https://botbuddy.net")
@@ -68,9 +66,22 @@ func main() {
 		log.Fatal(err)
 	}
 
+	log.Println("Initializing connection to BotBuddy...")
 	go handleData(conn)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 }
+
+const (
+	Reset  = "\033[0m"
+	Red    = "\033[31m"
+	Green  = "\033[32m"
+	Yellow = "\033[33m"
+	Blue   = "\033[34m"
+	Purple = "\033[35m"
+	Cyan   = "\033[36m"
+	Gray   = "\033[37m"
+	White  = "\033[97m"
+)
