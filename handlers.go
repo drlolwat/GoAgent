@@ -60,11 +60,12 @@ func listRunningBots(conn net.Conn, data string) error {
 		runningBots[CLIENT_UUID] = []map[string]string{}
 	} else {
 		for _, client := range clients {
-			runningBots[CLIENT_UUID] = append(runningBots[CLIENT_UUID], map[string]string{"internalId": strconv.Itoa(client.InternalId), "status": client.Status})
+			runningBots[CLIENT_UUID] = append(runningBots[CLIENT_UUID], map[string]string{strconv.Itoa(client.InternalId): client.Status})
 		}
 	}
 
 	runningBotsJson, _ := json.Marshal(runningBots)
+	fmt.Println(string(runningBotsJson))
 	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	return nil
 }
