@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -14,7 +15,12 @@ type Client struct {
 	StartedAt  int64
 }
 
-var clients = make(map[int]*Client)
+type SafeClients struct {
+	clients map[int]*Client
+	mux     sync.RWMutex
+}
+
+var safeClients = SafeClients{clients: make(map[int]*Client)}
 
 func NewClient(pid int, internalId int, status string) *Client {
 	client := &Client{
@@ -24,24 +30,34 @@ func NewClient(pid int, internalId int, status string) *Client {
 		StartedAt:  time.Now().Unix(),
 	}
 
-	clients[internalId] = client
+	safeClients.mux.Lock()
+	safeClients.clients[internalId] = client
+	safeClients.mux.Unlock()
+
 	return client
 }
 
 func IsClientRunning(internalId int) bool {
-	_, exists := clients[internalId]
+	safeClients.mux.RLock()
+	_, exists := safeClients.clients[internalId]
+	safeClients.mux.RUnlock()
+
 	return exists
 }
 
 func RemoveClientByInternalId(internalId int) {
-	delete(clients, internalId)
+	safeClients.mux.Lock()
+	delete(safeClients.clients, internalId)
+	safeClients.mux.Unlock()
 }
 
 func StopBotByInternalId(internalId int) {
-	if client, exists := clients[internalId]; exists {
+	safeClients.mux.Lock()
+	if client, exists := safeClients.clients[internalId]; exists {
 		killProcess(client.Pid)
-		delete(clients, internalId)
+		delete(safeClients.clients, internalId)
 	}
+	safeClients.mux.Unlock()
 }
 
 func killProcess(pid int) {
@@ -59,13 +75,18 @@ func killProcess(pid int) {
 }
 
 func ChangeClientStatus(internalId int, newStatus string) {
-	if client, exists := clients[internalId]; exists {
+	safeClients.mux.Lock()
+	if client, exists := safeClients.clients[internalId]; exists {
 		client.Status = newStatus
 	}
+	safeClients.mux.Unlock()
 }
 
 func GetClientUptime(internalId int) int64 {
-	if client, exists := clients[internalId]; exists {
+	safeClients.mux.RLock()
+	defer safeClients.mux.RUnlock()
+
+	if client, exists := safeClients.clients[internalId]; exists {
 		return time.Now().Unix() - client.StartedAt
 	}
 	return -1
