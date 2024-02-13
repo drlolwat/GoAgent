@@ -203,6 +203,7 @@ func startBot(conn net.Conn, data string) error {
 			cmdArgs = append(cmdArgs, "-accountTotp", args.AccountTotp)
 		}
 
+		cmdArgs = append(cmdArgs, "-covert")
 		cmdArgs = append(cmdArgs, "-params", args.ScriptName)
 
 		if args.ScriptParams != "" {
