@@ -75,7 +75,7 @@ func reconnect() (net.Conn, error) {
 	var err error
 
 	for {
-		conn, err = net.Dial("tcp", "127.0.0.1:7888")
+		conn, err = net.Dial("tcp", "bbaas.botbuddy.net:7888")
 		if err == nil {
 			return conn, nil
 		}
