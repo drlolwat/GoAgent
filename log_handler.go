@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type logHandler []LogEvent
 var logHandlers logHandler
 
 var completedLast = make(map[int]int64)
+var mutex = &sync.Mutex{}
 
 func init() {
 	logHandlers = append(logHandlers,
@@ -103,12 +105,18 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 		return errors.New("was not connected to BotBuddy network")
 	}
 
+	mutex.Lock()
 	lastCompleted, exists := completedLast[internalId]
-	if !exists || time.Now().Unix()-lastCompleted >= 1 {
+	mutex.Unlock()
+
+	if !exists || time.Now().Unix()-lastCompleted >= 10 {
 		log.Println(loginName + " has been detected as " + Green + "completed" + Reset + ".")
 		ChangeClientStatus(internalId, "Completed")
 		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Completed"}`, internalId))
+
+		mutex.Lock()
 		completedLast[internalId] = time.Now().Unix()
+		mutex.Unlock()
 	}
 
 	return nil
