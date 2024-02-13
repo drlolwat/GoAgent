@@ -56,13 +56,15 @@ func ping(conn net.Conn, data string) error {
 func listRunningBots(conn net.Conn, data string) error {
 	runningBots := make(map[string][]map[string]string)
 
-	if len(clients) == 0 {
+	safeClients.mux.RLock()
+	if len(safeClients.clients) == 0 {
 		runningBots[CLIENT_UUID] = []map[string]string{}
 	} else {
-		for _, client := range clients {
+		for _, client := range safeClients.clients {
 			runningBots[CLIENT_UUID] = append(runningBots[CLIENT_UUID], map[string]string{strconv.Itoa(client.InternalId): client.Status})
 		}
 	}
+	safeClients.mux.RUnlock()
 
 	runningBotsJson, _ := json.Marshal(runningBots)
 	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
@@ -280,7 +282,11 @@ func stopBot(conn net.Conn, data string) error {
 		return err
 	}
 
-	if _, ok := clients[args.InternalId]; ok {
+	safeClients.mux.RLock()
+	_, exists := safeClients.clients[args.InternalId]
+	safeClients.mux.RUnlock()
+
+	if exists {
 		StopBotByInternalId(args.InternalId)
 	}
 
