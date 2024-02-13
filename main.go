@@ -23,13 +23,18 @@ func handleData(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	defer func() {
-		if r := recover(); r != nil {
-			log.Println("Connection lost. Attempting to reconnect...")
-			conn, err := reconnect()
-			if err != nil {
-				log.Fatal(err)
+		for {
+			if r := recover(); r != nil {
+				log.Println(Red + "Connection to BotBuddy has been lost. Reconnecting..." + Reset)
+				var err error
+				conn, err = reconnect()
+				if err != nil {
+					log.Println(err)
+					time.Sleep(5 * time.Second)
+					continue
+				}
+				handleData(conn)
 			}
-			handleData(conn)
 		}
 	}()
 
