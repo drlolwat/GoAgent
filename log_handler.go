@@ -14,7 +14,7 @@ type logHandler []LogEvent
 
 var logHandlers logHandler
 
-var completedLast map[int]int64 = make(map[int]int64)
+var completedLast = make(map[int]int64)
 
 func init() {
 	logHandlers = append(logHandlers,

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var (
@@ -21,6 +22,17 @@ var (
 func handleData(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Connection lost. Attempting to reconnect...")
+			conn, err := reconnect()
+			if err != nil {
+				log.Fatal(err)
+			}
+			handleData(conn)
+		}
+	}()
+
 	for {
 		var packet *Packet
 		var err error
@@ -29,9 +41,10 @@ func handleData(conn net.Conn) {
 		} else {
 			packet, err = parsePacket(reader)
 		}
+
 		if err != nil {
 			log.Println(err)
-			return
+			panic(err)
 		}
 
 		header, data := packet.Header, packet.Data
@@ -44,8 +57,23 @@ func handleData(conn net.Conn) {
 		err = handlers[header](conn, data)
 		if err != nil {
 			log.Println(err)
-			return
+			panic(err)
 		}
+	}
+}
+
+func reconnect() (net.Conn, error) {
+	var conn net.Conn
+	var err error
+
+	for {
+		conn, err = net.Dial("tcp", "bbaas.botbuddy.net:7888")
+		if err == nil {
+			return conn, nil
+		}
+
+		log.Println("Failed to connect to server, retrying in 5 seconds...")
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -61,7 +89,7 @@ func main() {
 	fmt.Println("Developed by the team at https://botbuddy.net")
 	fmt.Println()
 
-	conn, err := net.Dial("tcp", "bbaas.botbuddy.net:7888")
+	conn, err := reconnect()
 	if err != nil {
 		log.Fatal(err)
 	}
