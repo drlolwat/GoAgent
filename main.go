@@ -25,14 +25,17 @@ func handleData(conn net.Conn) {
 	defer func() {
 		for {
 			if r := recover(); r != nil {
+				CUSTOMER_ID = new(int)
 				log.Println(Red + "Connection to BotBuddy has been lost. Reconnecting..." + Reset)
 				var err error
 				conn, err = reconnect()
 				if err != nil {
-					log.Println(err)
 					time.Sleep(5 * time.Second)
 					continue
+				} else {
+					log.Println(Green + "Reconnected to BotBuddy network." + Reset)
 				}
+
 				handleData(conn)
 			}
 		}
@@ -72,12 +75,11 @@ func reconnect() (net.Conn, error) {
 	var err error
 
 	for {
-		conn, err = net.Dial("tcp", "bbaas.botbuddy.net:7888")
+		conn, err = net.Dial("tcp", "127.0.0.1:7888")
 		if err == nil {
 			return conn, nil
 		}
 
-		log.Println("Failed to connect to server, retrying in 5 seconds...")
 		time.Sleep(5 * time.Second)
 	}
 }
@@ -96,7 +98,7 @@ func main() {
 
 	conn, err := reconnect()
 	if err != nil {
-		log.Fatal(err)
+		//log.Fatal(err)
 	}
 
 	log.Println("Initializing connection to BotBuddy...")
