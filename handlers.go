@@ -21,6 +21,8 @@ type handlerMap map[string]func(net.Conn, string) error
 
 var handlers handlerMap
 
+var startBotQueue = make(chan startBotData)
+
 func init() {
 	handlers = handlerMap{
 		"initHandshake":   initHandshake,
@@ -30,6 +32,17 @@ func init() {
 		"startBot":        startBot,
 		"stopBot":         stopBot,
 	}
+
+	go func() {
+		for botData := range startBotQueue {
+			err := startBotImpl(botData)
+			if err != nil {
+				log.Println(Red+"Error starting bot:", err, Reset)
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+	}()
 }
 
 func initHandshake(conn net.Conn, _ string) error {
@@ -73,23 +86,24 @@ func listRunningBots(conn net.Conn, _ string) error {
 }
 
 type startBotData struct {
-	ServerId        string `json:"serverId"`
-	InternalId      int    `json:"internalId"`
-	JarLocation     string `json:"jarLocation"`
-	ScriptsLocation string `json:"scriptsLocation"`
-	ScriptName      string `json:"scriptName"`
-	ScriptParams    string `json:"scriptParams"`
-	ClientName      string `json:"clientName"`
-	ClientPassword  string `json:"clientPassword"`
-	AccountUsername string `json:"accountUsername"`
-	AccountPassword string `json:"accountPassword"`
-	ProxyHost       string `json:"proxyHost"`
-	ProxyPort       int    `json:"proxyPort"`
-	ProxyUsername   string `json:"proxyUsername"`
-	ProxyPassword   string `json:"proxyPassword"`
-	AccountTotp     string `json:"accountTotp"`
-	Fps             int    `json:"fps"`
-	World           string `json:"world"`
+	ServerId        string   `json:"serverId"`
+	InternalId      int      `json:"internalId"`
+	JarLocation     string   `json:"jarLocation"`
+	ScriptsLocation string   `json:"scriptsLocation"`
+	ScriptName      string   `json:"scriptName"`
+	ScriptParams    string   `json:"scriptParams"`
+	ClientName      string   `json:"clientName"`
+	ClientPassword  string   `json:"clientPassword"`
+	AccountUsername string   `json:"accountUsername"`
+	AccountPassword string   `json:"accountPassword"`
+	ProxyHost       string   `json:"proxyHost"`
+	ProxyPort       int      `json:"proxyPort"`
+	ProxyUsername   string   `json:"proxyUsername"`
+	ProxyPassword   string   `json:"proxyPassword"`
+	AccountTotp     string   `json:"accountTotp"`
+	Fps             int      `json:"fps"`
+	World           string   `json:"world"`
+	Conn            net.Conn `json:"-"` // cheers copilot
 }
 
 func wrapperExists(scriptsFolder string) bool {
@@ -147,8 +161,15 @@ func startBot(conn net.Conn, data string) error {
 		return err
 	}
 
+	args.Conn = conn
+	startBotQueue <- args
+
+	return nil
+}
+
+func startBotImpl(args startBotData) error {
 	if !wrapperExists(args.ScriptsLocation) {
-		err = downloadWrapper(args.ScriptsLocation)
+		err := downloadWrapper(args.ScriptsLocation)
 		if err != nil {
 			return err
 		}
@@ -243,7 +264,7 @@ func startBot(conn net.Conn, data string) error {
 			if len(logHandlers) > 0 {
 				for _, l := range logHandlers {
 					if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) {
-						err := l.action.execute(conn, args.InternalId, args.AccountUsername, line)
+						err := l.action.execute(args.Conn, args.InternalId, args.AccountUsername, line)
 						if err != nil {
 							log.Println(err)
 							continue
@@ -255,7 +276,7 @@ func startBot(conn net.Conn, data string) error {
 
 		_ = cmd.Wait()
 		RemoveClientByInternalId(args.InternalId)
-		sendProcessExitNotification(conn, args.InternalId, args.AccountUsername)
+		sendProcessExitNotification(args.Conn, args.InternalId, args.AccountUsername)
 	}()
 
 	return nil
