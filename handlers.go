@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type handlerMap map[string]func(net.Conn, string) error
@@ -158,6 +159,7 @@ func startBot(conn net.Conn, data string) error {
 	}
 
 	go func() {
+		time.Sleep(1 * time.Second)
 		cmdArgs := []string{
 			"-jar",
 			args.JarLocation,
