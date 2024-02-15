@@ -32,12 +32,12 @@ func init() {
 	}
 }
 
-func initHandshake(conn net.Conn, data string) error {
+func initHandshake(conn net.Conn, _ string) error {
 	sendPacket(conn, "initHandshake", `{"machineId":"`+CLIENT_UUID+`"}`)
 	return nil
 }
 
-func handshakeOk(conn net.Conn, data string) error {
+func handshakeOk(_ net.Conn, data string) error {
 	customerId, err := strconv.Atoi(data)
 	if err != nil {
 		return err
@@ -50,11 +50,11 @@ func handshakeOk(conn net.Conn, data string) error {
 	return nil
 }
 
-func ping(conn net.Conn, data string) error {
+func ping(net.Conn, string) error {
 	return nil
 }
 
-func listRunningBots(conn net.Conn, data string) error {
+func listRunningBots(conn net.Conn, _ string) error {
 	runningBots := make(map[string][]map[string]string)
 
 	safeClients.mux.RLock()
@@ -278,7 +278,7 @@ type stopBotData struct {
 	InternalId int `json:"internalId"`
 }
 
-func stopBot(conn net.Conn, data string) error {
+func stopBot(_ net.Conn, data string) error {
 	var args stopBotData
 	err := json.Unmarshal([]byte(data), &args)
 	if err != nil {
