@@ -249,7 +249,7 @@ func startBotImpl(args startBotData) error {
 
 		pid := cmd.Process.Pid
 		_ = NewClient(pid, args.InternalId, "Running")
-		log.Println("Starting client for", args.AccountUsername)
+		log.Println(args.AccountUsername, "has been detected as "+Yellow+"starting"+Reset+".")
 
 		reader := bufio.NewReader(stdout)
 
