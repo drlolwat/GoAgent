@@ -165,7 +165,6 @@ func startBot(conn net.Conn, data string) error {
 			args.JarLocation,
 			"-script",
 			"BotBuddyWrapper",
-			//args.ScriptParams,
 			"-username",
 			args.ClientName,
 			"-password",
