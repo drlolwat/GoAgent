@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -233,7 +234,15 @@ func startBotImpl(args startBotData) error {
 			cmdArgs = append(cmdArgs, args.ScriptParams)
 		}
 
-		cmd := exec.Command("java", cmdArgs...)
+		//cmd := exec.Command("java", cmdArgs...)
+		var cmd *exec.Cmd
+		if runtime.GOOS == "windows" {
+			cmd = exec.Command("java", cmdArgs...)
+		} else {
+			// Use setsid to start a new session
+			cmdArgsWithSetsid := append([]string{"setsid", "java"}, cmdArgs...)
+			cmd = exec.Command(cmdArgsWithSetsid[0], cmdArgsWithSetsid[1:]...)
+		}
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
