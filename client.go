@@ -65,7 +65,7 @@ func killProcess(pid int) {
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(pid))
 	} else {
-		cmd = exec.Command("kill", "-9", strconv.Itoa(pid))
+		cmd = exec.Command("setsid", "kill", "-9", strconv.Itoa(pid))
 	}
 
 	err := cmd.Run()
