@@ -239,9 +239,42 @@ func startBotImpl(args startBotData) error {
 		if runtime.GOOS == "windows" {
 			cmd = exec.Command("java", cmdArgs...)
 		} else {
+			// Generate a unique temporary file name for the copy of the jar file
+			tempJarLocation := strings.TrimSuffix(args.JarLocation, ".jar") + "." + strconv.Itoa(time.Now().Nanosecond()) + ".jar"
+
+			// Create a copy of the jar file
+			srcFile, err := os.Open(args.JarLocation)
+			if err != nil {
+				log.Println("Error opening source file:", err)
+				return
+			}
+			defer srcFile.Close()
+
+			destFile, err := os.Create(tempJarLocation)
+			if err != nil {
+				log.Println("Error creating destination file:", err)
+				return
+			}
+			defer destFile.Close()
+
+			_, err = io.Copy(destFile, srcFile)
+			if err != nil {
+				log.Println("Error copying file:", err)
+				return
+			}
+			destFile.Close()
+
 			// Use setsid to start a new session
-			cmdArgsWithSetsid := append([]string{"setsid", "java"}, cmdArgs...)
+			cmdArgsWithSetsid := append([]string{"setsid", "java", "-jar", tempJarLocation})
 			cmd = exec.Command(cmdArgsWithSetsid[0], cmdArgsWithSetsid[1:]...)
+
+			// Delete the copied jar file
+			defer func() {
+				err = os.Remove(tempJarLocation)
+				if err != nil {
+					log.Println("Error deleting temporary jar file:", err)
+				}
+			}()
 		}
 
 		stdout, err := cmd.StdoutPipe()
