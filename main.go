@@ -16,7 +16,7 @@ var (
 	CLIENT_KEY  = "CLIENT_KEY_HERE"
 	CUSTOMER_ID *int
 	WRAPPER_JAR = "BotBuddyWrapper-1.0-SNAPSHOT-dep-included.jar"
-	DIST_URL    = "https://botbuddy.net/dist"
+	DIST_URL    = "https://dist.botbuddy.net/"
 )
 
 func handleData(conn net.Conn) {
