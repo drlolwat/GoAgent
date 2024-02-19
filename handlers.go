@@ -104,6 +104,8 @@ type startBotData struct {
 	AccountTotp     string   `json:"accountTotp"`
 	Fps             int      `json:"fps"`
 	World           string   `json:"world"`
+	JavaXms         string   `json:"javaXms"`
+	JavaXmx         string   `json:"javaXmx"`
 	Conn            net.Conn `json:"-"` // cheers copilot
 }
 
@@ -185,6 +187,8 @@ func startBotImpl(args startBotData) error {
 		cmdArgs := []string{
 			"-jar",
 			args.JarLocation,
+			"-Xms" + args.JavaXms,
+			"-Xmx" + args.JavaXmx,
 			"-script",
 			"BotBuddyWrapper",
 			"-username",
