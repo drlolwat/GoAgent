@@ -241,6 +241,7 @@ func startBotImpl(args startBotData) error {
 		//cmd := exec.Command("java", cmdArgs...)
 		var cmd *exec.Cmd
 		if runtime.GOOS == "windows" {
+			fmt.Println(cmd)
 			cmd = exec.Command("java", cmdArgs...)
 		} else {
 			// Use setsid to start a new session
