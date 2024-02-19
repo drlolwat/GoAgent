@@ -185,10 +185,10 @@ func startBotImpl(args startBotData) error {
 	go func() {
 		time.Sleep(1 * time.Second)
 		cmdArgs := []string{
-			"-jar",
-			args.JarLocation,
 			"-Xms" + args.JavaXms,
 			"-Xmx" + args.JavaXmx,
+			"-jar",
+			args.JarLocation,
 			"-script",
 			"BotBuddyWrapper",
 			"-username",
@@ -238,13 +238,10 @@ func startBotImpl(args startBotData) error {
 			cmdArgs = append(cmdArgs, args.ScriptParams)
 		}
 
-		//cmd := exec.Command("java", cmdArgs...)
 		var cmd *exec.Cmd
 		if runtime.GOOS == "windows" {
-			fmt.Println(cmd)
 			cmd = exec.Command("java", cmdArgs...)
 		} else {
-			// Use setsid to start a new session
 			cmdArgsWithSetsid := append([]string{"setsid", "java"}, cmdArgs...)
 			cmd = exec.Command(cmdArgsWithSetsid[0], cmdArgsWithSetsid[1:]...)
 		}
