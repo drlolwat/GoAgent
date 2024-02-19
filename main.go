@@ -25,8 +25,16 @@ func handleData(conn net.Conn) {
 	defer func() {
 		for {
 			if r := recover(); r != nil {
-				CUSTOMER_ID = new(int)
-				log.Println(Red + "Connection to BotBuddy has been lost. Reconnecting..." + Reset)
+				if netErr, ok := r.(*net.OpError); ok {
+					if netErr.Err == syscall.EPIPE {
+						log.Println(Red + "Connection to BotBuddy has been lost due to a broken pipe. Reconnecting..." + Reset)
+					} else {
+						log.Println(Red + "Connection to BotBuddy has been lost. Reconnecting..." + Reset)
+					}
+				} else {
+					log.Println(Red + "An error occurred. Reconnecting..." + Reset)
+				}
+
 				var err error
 				conn, err = reconnect()
 				if err != nil {
