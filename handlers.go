@@ -199,9 +199,9 @@ func startBotImpl(args startBotData) error {
 			args.AccountUsername,
 			"-accountPassword",
 			args.AccountPassword,
-			//"-userhome",
-			//"BotBuddy/" + strconv.Itoa(args.InternalId),
-			"-fresh",
+			"-userhome",
+			"BotBuddy/" + strconv.Itoa(args.InternalId),
+			//"-fresh",
 			"-destroy",
 		}
 
