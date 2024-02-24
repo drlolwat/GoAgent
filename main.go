@@ -23,6 +23,7 @@ func handleData(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	defer func() {
+		time.Sleep(time.Second)
 		for {
 			if r := recover(); r != nil {
 				if netErr, ok := r.(*net.OpError); ok {
@@ -38,13 +39,10 @@ func handleData(conn net.Conn) {
 				var err error
 				conn, err = reconnect()
 				if err != nil {
-					time.Sleep(5 * time.Second)
-					continue
 				} else {
-					log.Println(Green + "Reconnected to BotBuddy network." + Reset)
+					go handleData(conn)
+					return
 				}
-
-				handleData(conn)
 			}
 		}
 	}()
@@ -82,13 +80,14 @@ func reconnect() (net.Conn, error) {
 	var conn net.Conn
 	var err error
 
+	CUSTOMER_ID = nil
+
 	for {
 		conn, err = net.Dial("tcp", "bbaas.botbuddy.net:7888")
 		if err == nil {
 			return conn, nil
 		}
-
-		time.Sleep(5 * time.Second)
+		time.Sleep(time.Second * 1)
 	}
 }
 
