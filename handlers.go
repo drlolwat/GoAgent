@@ -201,7 +201,6 @@ func startBotImpl(args startBotData) error {
 			args.AccountPassword,
 			"-userhome",
 			"BotBuddy/" + strconv.Itoa(args.InternalId),
-			//"-fresh",
 			"-destroy",
 		}
 

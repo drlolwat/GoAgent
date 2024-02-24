@@ -17,10 +17,11 @@ var (
 	CUSTOMER_ID *int
 	WRAPPER_JAR = "BotBuddyWrapper-1.0-SNAPSHOT-dep-included.jar"
 	DIST_URL    = "https://dist.botbuddy.net/"
+	Master      net.Conn
 )
 
-func handleData(conn net.Conn) {
-	reader := bufio.NewReader(conn)
+func handleData() {
+	reader := bufio.NewReader(Master)
 
 	defer func() {
 		time.Sleep(time.Second)
@@ -37,10 +38,10 @@ func handleData(conn net.Conn) {
 				}
 
 				var err error
-				conn, err = reconnect()
+				Master, err = reconnect()
 				if err != nil {
 				} else {
-					go handleData(conn)
+					go handleData()
 					return
 				}
 			}
@@ -68,7 +69,7 @@ func handleData(conn net.Conn) {
 			continue
 		}
 
-		err = handlers[header](conn, data)
+		err = handlers[header](Master, data)
 		if err != nil {
 			log.Println(err)
 			panic(err)
@@ -77,15 +78,14 @@ func handleData(conn net.Conn) {
 }
 
 func reconnect() (net.Conn, error) {
-	var conn net.Conn
 	var err error
 
 	CUSTOMER_ID = nil
 
 	for {
-		conn, err = net.Dial("tcp", "bbaas.botbuddy.net:7888")
+		Master, err = net.Dial("tcp", "127.0.0.1:7888")
 		if err == nil {
-			return conn, nil
+			return Master, nil
 		}
 		time.Sleep(time.Second * 1)
 	}
@@ -103,13 +103,13 @@ func main() {
 	fmt.Println("Developed by the team at https://botbuddy.net")
 	fmt.Println()
 
-	conn, err := reconnect()
+	_, err := reconnect()
 	if err != nil {
 		//log.Fatal(err)
 	}
 
 	log.Println("Initializing connection to BotBuddy...")
-	go handleData(conn)
+	go handleData()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
