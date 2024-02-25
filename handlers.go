@@ -261,32 +261,60 @@ func startBotImpl(args startBotData) error {
 		_ = NewClient(pid, args.InternalId, "Running")
 		log.Println(args.AccountUsername, "has been detected as "+Yellow+"starting"+Reset+".")
 
-		reader := bufio.NewReader(stdout)
+		done := make(chan error, 1)
+		lines := make(chan string)
 
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil || io.EOF == err {
-				break
+		go func() {
+			scanner := bufio.NewScanner(stdout)
+			for scanner.Scan() {
+				lines <- scanner.Text()
 			}
+			if err := scanner.Err(); err != nil {
+				//fmt.Printf("Error reading from stdout pipe: %v\n", err)
+			}
+			close(lines)
+		}()
 
-			line = strings.Trim(line, "\n")
+		go func() {
+			done <- cmd.Wait()
+		}()
 
-			if len(logHandlers) > 0 {
-				for _, l := range logHandlers {
-					if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) {
-						err := l.action.execute(args.Conn, args.InternalId, args.AccountUsername, line)
-						if err != nil {
-							log.Println(err)
-							continue
+		finished := false
+
+		for !finished {
+			select {
+			case <-done:
+				//fmt.Println("Command finished. Log monitoring stopped.")
+				finished = true
+				break
+			case line := <-lines:
+				if len(logHandlers) > 0 {
+					for _, l := range logHandlers {
+						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) {
+							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line)
+							if err != nil {
+								//log.Println(err)
+								go func() {
+									success := false
+									for !success {
+										time.Sleep(time.Second)
+										err := l.action.execute(Master, args.InternalId, args.AccountUsername, line)
+										if err == nil {
+											success = true
+										}
+									}
+								}()
+								continue
+							}
 						}
 					}
 				}
+				break
 			}
 		}
 
-		_ = cmd.Wait()
 		RemoveClientByInternalId(args.InternalId)
-		sendProcessExitNotification(args.Conn, args.InternalId, args.AccountUsername)
+		sendProcessExitNotification(Master, args.InternalId, args.AccountUsername)
 	}()
 
 	return nil
