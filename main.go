@@ -58,7 +58,7 @@ func handleData() {
 		}
 
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 			panic(err)
 		}
 
@@ -71,7 +71,7 @@ func handleData() {
 
 		err = handlers[header](Master, data)
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 			panic(err)
 		}
 	}
@@ -83,7 +83,7 @@ func reconnect() (net.Conn, error) {
 	CUSTOMER_ID = nil
 
 	for {
-		Master, err = net.Dial("tcp", "127.0.0.1:7888")
+		Master, err = net.Dial("tcp", "bbaas.botbuddy.net:7888")
 		if err == nil {
 			return Master, nil
 		}
