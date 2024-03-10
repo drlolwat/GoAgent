@@ -11,6 +11,7 @@ import (
 type Client struct {
 	Pid        int
 	InternalId int
+	Script     string
 	Status     string
 	StartedAt  int64
 }
@@ -22,11 +23,12 @@ type SafeClients struct {
 
 var safeClients = SafeClients{clients: make(map[int]*Client)}
 
-func NewClient(pid int, internalId int, status string) *Client {
+func NewClient(pid int, internalId int, status string, script string) *Client {
 	client := &Client{
 		Pid:        pid,
 		InternalId: internalId,
 		Status:     status,
+		Script:     script,
 		StartedAt:  time.Now().Unix(),
 	}
 
