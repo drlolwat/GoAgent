@@ -89,14 +89,10 @@ func parseEncryptedPacket(reader *bufio.Reader) (*Packet, error) {
 	return &Packet{Header: header, Data: data}, nil
 }
 
-func sendEncryptedPacket(conn net.Conn, header string, data string) {
-	if conn == nil {
-		fmt.Println(Red + "was not connected to BotBuddy network" + Reset)
-		return
-	}
+func sendEncryptedPacket(conn net.Conn, header string, data string) error {
 	key, err := generateKey(CLIENT_KEY)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Unable to generate client key")
 	}
 
 	plaintext := []byte(fmt.Sprintf("%s\r%s", header, data))
@@ -119,11 +115,13 @@ func sendEncryptedPacket(conn net.Conn, header string, data string) {
 
 	_, err = conn.Write(append(lengthBytes, []byte(ciphertextEncoded)...))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }
 
-func sendPacket(conn net.Conn, header string, data string) {
+func sendPacket(conn net.Conn, header string, data string) error {
 	packet := header + "\r" + data
 
 	length := uint32(len(packet))
@@ -132,6 +130,8 @@ func sendPacket(conn net.Conn, header string, data string) {
 
 	_, err := conn.Write(append(lengthBytes, []byte(packet)...))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }
