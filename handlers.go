@@ -47,7 +47,10 @@ func init() {
 }
 
 func initHandshake(conn net.Conn, _ string) error {
-	sendPacket(conn, "initHandshake", `{"machineId":"`+CLIENT_UUID+`"}`)
+	err := sendPacket(conn, "initHandshake", `{"machineId":"`+CLIENT_UUID+`"}`)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -82,7 +85,10 @@ func listRunningBots(conn net.Conn, _ string) error {
 	safeClients.mux.RUnlock()
 
 	runningBotsJson, _ := json.Marshal(runningBots)
-	sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
+	err := sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

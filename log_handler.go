@@ -52,28 +52,30 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 		return errors.New("was not connected to BotBuddy network")
 	}
 
-	script := "Unknown"
-	safeClients.mux.RLock()
-	if client, exists := safeClients.clients[internalId]; exists {
-		script = client.Script
-	}
-	safeClients.mux.RUnlock()
-
 	if r.proxyBlocked {
 		log.Println(loginName + " has been detected as having a " + Red + "blocked proxy" + Reset + ".")
 		ChangeClientStatus(internalId, "ProxyBlocked")
-		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked","Script":"%s"}`, internalId, script))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked"}`, internalId))
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
 	if r.online {
 		log.Println(loginName + " has been detected as " + Green + "running" + Reset + ".")
 		ChangeClientStatus(internalId, "Running")
-		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked","Script":"%s"}`, internalId, script))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Running"}`, internalId))
+		if err != nil {
+			return err
+		}
 	} else {
 		log.Println(loginName + " has been detected as " + Red + "stopped" + Reset + ".")
 		ChangeClientStatus(internalId, "Stopped")
-		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked","Script":"%s"}`, internalId, script))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Stopped"}`, internalId))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -89,19 +91,22 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 	log.Println(loginName + " has been been detected as " + Red + "banned" + Reset + ".")
 	ChangeClientStatus(internalId, "Banned")
 
-	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned"}`, internalId))
+	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned"}`, internalId))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 type ReportLock struct{}
 
 func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
-	if conn == nil {
-		return errors.New("was not connected to BotBuddy network")
-	}
 	log.Println(loginName + " has been detected as " + Red + "locked" + Reset + ".")
 	ChangeClientStatus(internalId, "Locked")
-	sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Locked"}`, internalId))
+	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Locked"}`, internalId))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -119,7 +124,10 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 	if !exists || time.Now().Unix()-lastCompleted >= 10 {
 		log.Println(loginName + " has been detected as " + Green + "completed" + Reset + ".")
 		ChangeClientStatus(internalId, "Completed")
-		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Completed"}`, internalId))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Completed"}`, internalId))
+		if err != nil {
+			return err
+		}
 
 		mutex.Lock()
 		completedLast[internalId] = time.Now().Unix()
@@ -132,14 +140,13 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 type ReportNoScript struct{}
 
 func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
-	if conn == nil {
-		return errors.New("was not connected to BotBuddy network")
-	}
-
 	if GetClientUptime(internalId) >= 30 {
 		log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ".")
 		ChangeClientStatus(internalId, "NoScript")
-		sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"NoScript"}`, internalId))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"NoScript"}`, internalId))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -173,7 +180,10 @@ func (r ReportWrapperData) execute(conn net.Conn, internalId int, loginName stri
 		return err
 	}
 
-	sendEncryptedPacket(conn, "wrapperData", string(send))
+	err = sendEncryptedPacket(conn, "wrapperData", string(send))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
