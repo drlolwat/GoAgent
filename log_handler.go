@@ -52,10 +52,17 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 		return errors.New("was not connected to BotBuddy network")
 	}
 
+	script := "Unknown"
+	safeClients.mux.RLock()
+	if client, exists := safeClients.clients[internalId]; exists {
+		script = client.Script
+	}
+	safeClients.mux.RUnlock()
+
 	if r.proxyBlocked {
 		log.Println(loginName + " has been detected as having a " + Red + "blocked proxy" + Reset + ".")
 		ChangeClientStatus(internalId, "ProxyBlocked")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked"}`, internalId))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked","Script":"%s"}`, internalId, script))
 		if err != nil {
 			return err
 		}
@@ -65,14 +72,14 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 	if r.online {
 		log.Println(loginName + " has been detected as " + Green + "running" + Reset + ".")
 		ChangeClientStatus(internalId, "Running")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Running"}`, internalId))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Running","Script":"%s"}`, internalId, script))
 		if err != nil {
 			return err
 		}
 	} else {
 		log.Println(loginName + " has been detected as " + Red + "stopped" + Reset + ".")
 		ChangeClientStatus(internalId, "Stopped")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Stopped"}`, internalId))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Stopped","Script":"%s"}`, internalId, script))
 		if err != nil {
 			return err
 		}
