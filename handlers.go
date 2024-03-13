@@ -188,7 +188,7 @@ func startBotImpl(args startBotData) error {
 		return errors.New("Client is already running for " + args.AccountUsername)
 	}
 
-	go func() {
+	go func(args startBotData) {
 		time.Sleep(1 * time.Second)
 		cmdArgs := []string{
 			"-Xms" + args.JavaXms,
@@ -297,13 +297,13 @@ func startBotImpl(args startBotData) error {
 				if len(logHandlers) > 0 {
 					for _, l := range logHandlers {
 						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) {
-							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line)
+							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName)
 							if err != nil {
 								go func() {
 									success := false
 									for !success {
 										time.Sleep(time.Second)
-										err := l.action.execute(Master, args.InternalId, args.AccountUsername, line)
+										err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName)
 										if err == nil {
 											success = true
 										}
@@ -319,18 +319,18 @@ func startBotImpl(args startBotData) error {
 		}
 
 		RemoveClientByInternalId(args.InternalId)
-		sendProcessExitNotification(Master, args.InternalId, args.AccountUsername)
-	}()
+		sendProcessExitNotification(Master, args.InternalId, args.AccountUsername, args.ScriptName)
+	}(args)
 
 	return nil
 }
 
-func sendProcessExitNotification(conn net.Conn, internalId int, loginName string) {
+func sendProcessExitNotification(conn net.Conn, internalId int, loginName string, script string) {
 	if conn != nil {
 		err := ReportBotStatus{
 			online:       false,
 			proxyBlocked: false,
-		}.execute(conn, internalId, loginName, "")
+		}.execute(conn, internalId, loginName, "", script)
 
 		if err != nil {
 			log.Println(err)

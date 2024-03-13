@@ -41,7 +41,7 @@ type LogEvent struct {
 }
 
 type Action interface {
-	execute(conn net.Conn, internalId int, loginName string, logLine string) error
+	execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error
 }
 
 type ReportBotStatus struct {
@@ -49,17 +49,10 @@ type ReportBotStatus struct {
 	proxyBlocked bool
 }
 
-func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
-
-	script := "Unknown"
-	safeClients.mux.RLock()
-	if client, exists := safeClients.clients[internalId]; exists {
-		script = client.Script
-	}
-	safeClients.mux.RUnlock()
 
 	if r.proxyBlocked {
 		log.Println(loginName + " has been detected as having a " + Red + "blocked proxy" + Reset + ".")
@@ -92,7 +85,7 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 
 type ReportBan struct{}
 
-func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
@@ -109,10 +102,10 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 
 type ReportLock struct{}
 
-func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	log.Println(loginName + " has been detected as " + Red + "locked" + Reset + ".")
 	ChangeClientStatus(internalId, "Locked")
-	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Locked"}`, internalId))
+	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Locked","Script":"%s"}`, internalId, script))
 	if err != nil {
 		return err
 	}
@@ -121,7 +114,7 @@ func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, log
 
 type ReportCompleted struct{}
 
-func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
@@ -133,7 +126,7 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 	if !exists || time.Now().Unix()-lastCompleted >= 10 {
 		log.Println(loginName + " has been detected as " + Green + "completed" + Reset + ".")
 		ChangeClientStatus(internalId, "Completed")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Completed"}`, internalId))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Completed","Script":"%s"}`, internalId, script))
 		if err != nil {
 			return err
 		}
@@ -148,11 +141,11 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 
 type ReportNoScript struct{}
 
-func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	if GetClientUptime(internalId) >= 30 {
 		log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ".")
 		ChangeClientStatus(internalId, "NoScript")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"NoScript"}`, internalId))
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"NoScript","Script":"%s"}`, internalId, script))
 		if err != nil {
 			return err
 		}
@@ -163,7 +156,7 @@ func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string,
 
 type ReportWrapperData struct{}
 
-func (r ReportWrapperData) execute(conn net.Conn, internalId int, loginName string, logLine string) error {
+func (r ReportWrapperData) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	data := make(map[int]map[string]interface{})
 	innerMap := make(map[string]interface{})
 
