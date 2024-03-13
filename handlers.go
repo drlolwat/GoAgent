@@ -299,7 +299,6 @@ func startBotImpl(args startBotData) error {
 						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) {
 							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line)
 							if err != nil {
-								//log.Println(err)
 								go func() {
 									success := false
 									for !success {

@@ -25,10 +25,11 @@ func init() {
 		LogEvent{"response: locked", ReportLock{}},
 		LogEvent{"reached target ttl and qp", ReportCompleted{}},
 		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
-		LogEvent{"Tutorial Island completed", ReportCompleted{}},
+		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
+		LogEvent{"tutorial island completed", ReportCompleted{}},
 		LogEvent{"trade unrestricted, stopping", ReportCompleted{}},
 		LogEvent{"running: none", ReportNoScript{}},
-		LogEvent{"There was a problem authorizing your account", ReportNoScript{}},
+		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
 		LogEvent{"BB_OUTPUT", ReportWrapperData{}},
 		LogEvent{"blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
 	)
