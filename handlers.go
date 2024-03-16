@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,9 @@ type handlerMap map[string]func(net.Conn, string) error
 var handlers handlerMap
 
 var startBotQueue = make(chan startBotData)
+
+var basePort = 9222
+var portMutex = &sync.Mutex{}
 
 func init() {
 	handlers = handlerMap{
@@ -231,8 +235,14 @@ func startBotImpl(args startBotData) error {
 			}
 		}
 
+		portMutex.Lock()
+		clientPort := basePort
+		basePort++
+		portMutex.Unlock()
+
 		if args.AccountTotp != "" {
-			cmdArgs = append(cmdArgs, "-newAccountSystem")
+			cmdArgs = append(cmdArgs, "-remote-debugging-port="+strconv.Itoa(clientPort))
+			cmdArgs = append(cmdArgs, "-new-account-browser-login")
 			cmdArgs = append(cmdArgs, "-accountTotp", args.AccountTotp)
 		}
 
@@ -264,7 +274,12 @@ func startBotImpl(args startBotData) error {
 		}
 
 		pid := cmd.Process.Pid
-		_ = NewClient(pid, args.InternalId, "Starting", args.ScriptName)
+		totp := ""
+		if args.AccountTotp != "" {
+			totp = args.AccountTotp
+		}
+
+		_ = NewClient(pid, args.InternalId, "Starting", args.ScriptName, clientPort, args.AccountUsername, args.AccountPassword, totp)
 		log.Println(args.AccountUsername, "has been detected as "+Yellow+"starting"+Reset+".")
 
 		done := make(chan error, 1)

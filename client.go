@@ -9,11 +9,16 @@ import (
 )
 
 type Client struct {
-	Pid        int
-	InternalId int
-	Script     string
-	Status     string
-	StartedAt  int64
+	Pid          int
+	InternalId   int
+	Script       string
+	Status       string
+	StartedAt    int64
+	Port         int
+	LoginName    string
+	LoginPass    string
+	LoginTotp    string
+	HandledLogin bool
 }
 
 type SafeClients struct {
@@ -23,13 +28,18 @@ type SafeClients struct {
 
 var safeClients = SafeClients{clients: make(map[int]*Client)}
 
-func NewClient(pid int, internalId int, status string, script string) *Client {
+func NewClient(pid int, internalId int, status string, script string, port int, loginName string, loginPass string, loginTotp string) *Client {
 	client := &Client{
-		Pid:        pid,
-		InternalId: internalId,
-		Status:     status,
-		Script:     script,
-		StartedAt:  time.Now().Unix(),
+		Pid:          pid,
+		InternalId:   internalId,
+		Status:       status,
+		Script:       script,
+		StartedAt:    time.Now().Unix(),
+		Port:         port,
+		LoginName:    loginName,
+		LoginPass:    loginPass,
+		LoginTotp:    loginTotp,
+		HandledLogin: false,
 	}
 
 	safeClients.mux.Lock()

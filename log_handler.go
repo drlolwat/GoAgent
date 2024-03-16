@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +37,8 @@ func init() {
 		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
 		LogEvent{"BB_OUTPUT", ReportWrapperData{}},
 		LogEvent{"blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
+		LogEvent{"initialize on thread", HandleBrowser{}},
+		LogEvent{"successfully authorized your account", DeleteTemps{}},
 	)
 }
 
@@ -42,6 +49,109 @@ type LogEvent struct {
 
 type Action interface {
 	execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error
+}
+
+type DeleteTemps struct{}
+
+func (d DeleteTemps) execute(_ net.Conn, _ int, _ string, _ string, _ string) error {
+	tempDir := os.TempDir()
+	files, err := filepath.Glob(filepath.Join(tempDir, "wct*.tmp"))
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		err := os.Remove(file)
+		if err != nil {
+			_ = err
+		}
+	}
+
+	return nil
+}
+
+type HandleBrowser struct{}
+
+func (h HandleBrowser) execute(_ net.Conn, internalId int, _ string, _ string, _ string) error {
+	safeClients.mux.RLock()
+	client, exists := safeClients.clients[internalId]
+	safeClients.mux.RUnlock()
+
+	if !exists {
+		fmt.Println("Client with internalId", internalId, "does not exist")
+		return errors.New("client does not exist")
+	}
+
+	if client.HandledLogin {
+		return nil
+	}
+
+	client.HandledLogin = true
+	safeClients.mux.Lock()
+	safeClients.clients[internalId] = client
+	safeClients.mux.Unlock()
+
+	port := client.Port
+	email := client.LoginName
+	password := client.LoginPass
+	totpSecret := client.LoginTotp
+
+	cmdInstallDrissionpage := exec.Command("pip", "install", "drissionpage")
+	err := cmdInstallDrissionpage.Run()
+	if err != nil {
+		return err
+	}
+
+	cmdInstallPyotp := exec.Command("pip", "install", "pyotp")
+	err = cmdInstallPyotp.Run()
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(3 * time.Second)
+
+	browsePy, err := FS.ReadFile("lib/browse.py")
+	if err != nil {
+		return err
+	}
+
+	tmpfileScript, err := os.CreateTemp("", "wct*.tmp")
+	if err != nil {
+		return err
+	}
+
+	_, err = tmpfileScript.Write(browsePy)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command("python", tmpfileScript.Name(), "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_secret", totpSecret)
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+	go func() {
+		var err error
+		maxRetries := 1
+		for i := 0; i < maxRetries; i++ {
+			_, err = cmd.Output()
+			if err == nil {
+				err := DeleteTemps{}.execute(nil, internalId, "", "", "")
+				if err != nil {
+					break
+				}
+				break
+			}
+			time.Sleep(3 * time.Second)
+		}
+
+		defer func(name string) {
+			err := os.Remove(name)
+			if err != nil {
+
+			}
+		}(tmpfileScript.Name())
+	}()
+
+	return nil
 }
 
 type ReportBotStatus struct {
