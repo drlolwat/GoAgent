@@ -108,18 +108,6 @@ func main() {
 		//log.Fatal(err)
 	}
 
-	go func() {
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				_ = DeleteTemps{}.execute(nil, 0, "", "", "")
-			}
-		}
-	}()
-
 	log.Println("Initializing connection to BotBuddy...")
 	go handleData()
 

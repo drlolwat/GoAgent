@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,7 +34,6 @@ func init() {
 		LogEvent{"BB_OUTPUT", ReportWrapperData{}},
 		LogEvent{"blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
 		LogEvent{"initialize on thread", HandleBrowser{}},
-		LogEvent{"successfully authorized your account", DeleteTemps{}},
 	)
 }
 
@@ -47,25 +44,6 @@ type LogEvent struct {
 
 type Action interface {
 	execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error
-}
-
-type DeleteTemps struct{}
-
-func (d DeleteTemps) execute(_ net.Conn, _ int, _ string, _ string, _ string) error {
-	tempDir := os.TempDir()
-	files, err := filepath.Glob(filepath.Join(tempDir, "wct*.tmp"))
-	if err != nil {
-		return nil
-	}
-
-	for _, file := range files {
-		err := os.Remove(file)
-		if err != nil {
-			_ = err
-		}
-	}
-
-	return nil
 }
 
 type HandleBrowser struct{}
