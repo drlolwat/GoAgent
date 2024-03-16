@@ -115,17 +115,9 @@ func (h HandleBrowser) execute(_ net.Conn, internalId int, _ string, _ string, _
 		return err
 	}
 
-	tmpfileScript, err := os.CreateTemp("", "wct*.tmp")
-	if err != nil {
-		return err
-	}
+	browsePyStr := string(browsePy)
 
-	_, err = tmpfileScript.Write(browsePy)
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("python", tmpfileScript.Name(), "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_secret", totpSecret)
+	cmd := exec.Command("python", "-c", browsePyStr, "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_secret", totpSecret)
 	stderr := &bytes.Buffer{}
 	cmd.Stderr = stderr
 	go func() {
@@ -142,13 +134,6 @@ func (h HandleBrowser) execute(_ net.Conn, internalId int, _ string, _ string, _
 			}
 			time.Sleep(3 * time.Second)
 		}
-
-		defer func(name string) {
-			err := os.Remove(name)
-			if err != nil {
-
-			}
-		}(tmpfileScript.Name())
 	}()
 
 	return nil
