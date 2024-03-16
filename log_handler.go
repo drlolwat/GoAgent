@@ -57,7 +57,7 @@ func (d DeleteTemps) execute(_ net.Conn, _ int, _ string, _ string, _ string) er
 	tempDir := os.TempDir()
 	files, err := filepath.Glob(filepath.Join(tempDir, "wct*.tmp"))
 	if err != nil {
-		return err
+		return nil
 	}
 
 	for _, file := range files {
