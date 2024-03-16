@@ -60,6 +60,7 @@ func initHandshake(conn net.Conn, data string) error {
 		}
 		KeepRetrying = false
 		log.Println(Red + "Incompatible agent version. Please update your agent." + Reset)
+		log.Println("Latest compatible version: " + Green + "3." + data + Reset)
 		return nil
 	}
 
