@@ -52,7 +52,17 @@ func init() {
 	}()
 }
 
-func initHandshake(conn net.Conn, _ string) error {
+func initHandshake(conn net.Conn, data string) error {
+	if data != AGENT_VER {
+		err := conn.Close()
+		if err != nil {
+			return err
+		}
+		KeepRetrying = false
+		log.Println(Red + "Incompatible agent version. Please update your agent." + Reset)
+		return nil
+	}
+
 	err := sendPacket(conn, "initHandshake", `{"machineId":"`+CLIENT_UUID+`"}`)
 	if err != nil {
 		return err
@@ -435,10 +445,6 @@ func linkJagex(_ net.Conn, data string) error {
 		for i := 0; i < maxRetries; i++ {
 			_, err = cmd.Output()
 			if err == nil {
-				err := DeleteTemps{}.execute(nil, args.InternalId, "", "", "")
-				if err != nil {
-					break
-				}
 				break
 			}
 			time.Sleep(3 * time.Second)

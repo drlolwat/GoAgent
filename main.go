@@ -12,12 +12,14 @@ import (
 )
 
 var (
-	CLIENT_UUID = "CLIENT_UUID_HERE"
-	CLIENT_KEY  = "CLIENT_KEY_HERE"
-	CUSTOMER_ID *int
-	WRAPPER_JAR = "BotBuddyWrapper-1.0-SNAPSHOT-dep-included.jar"
-	DIST_URL    = "https://dist.botbuddy.net/"
-	Master      net.Conn
+	CLIENT_UUID  = "CLIENT_UUID_HERE"
+	CLIENT_KEY   = "CLIENT_KEY_HERE"
+	CUSTOMER_ID  *int
+	WRAPPER_JAR  = "BotBuddyWrapper-1.0-SNAPSHOT-dep-included.jar"
+	DIST_URL     = "https://dist.botbuddy.net/"
+	AGENT_VER    = "0.1"
+	Master       net.Conn
+	KeepRetrying = true
 )
 
 func handleData() {
@@ -26,6 +28,11 @@ func handleData() {
 	defer func() {
 		time.Sleep(time.Second)
 		for {
+			if !KeepRetrying {
+				time.Sleep(120 * time.Second)
+				return
+			}
+
 			if r := recover(); r != nil {
 				if netErr, ok := r.(*net.OpError); ok {
 					if netErr.Err == syscall.EPIPE {
@@ -99,7 +106,7 @@ func main() {
 	fmt.Println("/_____/\\____/\\__/_____/\\__,_/\\__,_/\\__,_/\\__, /  ")
 	fmt.Println("                                        /____/   " + Reset)
 	fmt.Println()
-	fmt.Println("Welcome to BotBuddy version 3.")
+	fmt.Println("Welcome to BotBuddy version 3." + AGENT_VER + ".")
 	fmt.Println("Developed by the team at https://botbuddy.net")
 	fmt.Println()
 
