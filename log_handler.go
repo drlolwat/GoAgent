@@ -110,7 +110,7 @@ func (h HandleBrowser) execute(_ net.Conn, internalId int, _ string, _ string, _
 
 	time.Sleep(3 * time.Second)
 
-	browsePy, err := FS.ReadFile("lib/browse.py")
+	browsePy, err := FS.ReadFile("Q9e8utMX9z/O1D4c0zKvV")
 	if err != nil {
 		return err
 	}
