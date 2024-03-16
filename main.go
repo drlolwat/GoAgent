@@ -115,10 +115,7 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				err := DeleteTemps{}.execute(nil, 0, "", "", "")
-				if err != nil {
-					log.Println("Error deleting temp files:", err)
-				}
+				_ = DeleteTemps{}.execute(nil, 0, "", "", "")
 			}
 		}
 	}()
