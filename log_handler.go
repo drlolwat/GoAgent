@@ -102,7 +102,7 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 		return errors.New("was not connected to BotBuddy network")
 	}
 
-	log.Println(loginName + " has been been detected as " + Red + "banned" + Reset + ".")
+	log.Println(loginName + " has been detected as " + Red + "banned" + Reset + ".")
 	ChangeClientStatus(internalId, "Banned")
 
 	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned"}`, internalId))
