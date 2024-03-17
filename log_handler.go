@@ -28,6 +28,7 @@ func init() {
 		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
 		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
 		LogEvent{"tutorial island complete! stopping script", ReportCompleted{}},
+		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
 		LogEvent{"trade unrestricted, stopping", ReportCompleted{}},
 		LogEvent{"running: none", ReportNoScript{}},
 		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
