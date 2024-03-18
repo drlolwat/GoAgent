@@ -106,7 +106,7 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 	log.Println(loginName + " has been detected as " + Red + "banned" + Reset + ".")
 	ChangeClientStatus(internalId, "Banned")
 
-	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned"}`, internalId))
+	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned", "Script":"%s"}`, internalId, script))
 	if err != nil {
 		return err
 	}
