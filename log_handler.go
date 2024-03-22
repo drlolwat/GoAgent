@@ -27,6 +27,7 @@ func init() {
 		LogEvent{"reached target ttl and qp", ReportCompleted{}},
 		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
 		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
+		LogEvent{"waio: job done", ReportCompleted{}},
 		LogEvent{"tutorial island complete! stopping script", ReportCompleted{}},
 		LogEvent{"Thank you for using braveTutorial", ReportCompleted{}},
 		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
@@ -107,7 +108,7 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 	log.Println(loginName + " has been detected as " + Red + "banned" + Reset + ".")
 	ChangeClientStatus(internalId, "Banned")
 
-	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned", "Script":"%s"}`, internalId, script))
+	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned","Script":"%s"}`, internalId, script))
 	if err != nil {
 		return err
 	}
