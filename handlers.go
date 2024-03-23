@@ -446,26 +446,27 @@ func linkJagex(_ net.Conn, data string) error {
 	go func() {
 		for scanner.Scan() {
 			if scanner.Text() == "Proxy blocked by Cloudflare" {
-				err := ReportBotStatus{online: false, proxyBlocked: true}.execute(Master, args.InternalId, email, "Proxy blocked by Cloudflare", "")
+				err = ReportBotStatus{online: false, proxyBlocked: true}.execute(Master, args.InternalId, email, "Proxy blocked by Cloudflare", "")
 				if err != nil {
+					log.Println(err)
 					return
 				}
 			}
 		}
 
-		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
+		if err = scanner.Err(); err != nil {
+			log.Println(err)
 		}
 	}()
 
 	err = cmd.Start()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	err = cmd.Wait()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	return nil
