@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -438,19 +437,36 @@ func linkJagex(_ net.Conn, data string) error {
 	time.Sleep(3 * time.Second)
 
 	cmd := exec.Command("python", "-c", args.Payload, "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_secret", totpSecret)
-	stderr := &bytes.Buffer{}
-	cmd.Stderr = stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scanner := bufio.NewScanner(stdout)
 	go func() {
-		var err error
-		maxRetries := 1
-		for i := 0; i < maxRetries; i++ {
-			_, err = cmd.Output()
-			if err == nil {
-				break
+		for scanner.Scan() {
+			if scanner.Text() == "Proxy blocked by Cloudflare" {
+				err := ReportBotStatus{online: false, proxyBlocked: true}.execute(Master, args.InternalId, email, "Proxy blocked by Cloudflare", "")
+				if err != nil {
+					return
+				}
 			}
-			time.Sleep(3 * time.Second)
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
 		}
 	}()
+
+	err = cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return nil
 }
