@@ -28,6 +28,7 @@ func init() {
 		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
 		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
 		LogEvent{"waio: job done", ReportCompleted{}},
+		LogEvent{"[ACTION] Stop Script", ReportCompleted{}},
 		LogEvent{"tutorial island complete! stopping script", ReportCompleted{}},
 		LogEvent{"Thank you for using braveTutorial", ReportCompleted{}},
 		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
