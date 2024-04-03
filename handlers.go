@@ -109,26 +109,27 @@ func listRunningBots(conn net.Conn, _ string) error {
 }
 
 type startBotData struct {
-	ServerId        string   `json:"serverId"`
-	InternalId      int      `json:"internalId"`
-	JarLocation     string   `json:"jarLocation"`
-	ScriptsLocation string   `json:"scriptsLocation"`
-	ScriptName      string   `json:"scriptName"`
-	ScriptParams    string   `json:"scriptParams"`
-	ClientName      string   `json:"clientName"`
-	ClientPassword  string   `json:"clientPassword"`
-	AccountUsername string   `json:"accountUsername"`
-	AccountPassword string   `json:"accountPassword"`
-	ProxyHost       string   `json:"proxyHost"`
-	ProxyPort       int      `json:"proxyPort"`
-	ProxyUsername   string   `json:"proxyUsername"`
-	ProxyPassword   string   `json:"proxyPassword"`
-	AccountTotp     string   `json:"accountTotp"`
-	Fps             int      `json:"fps"`
-	World           string   `json:"world"`
-	JavaXms         string   `json:"javaXms"`
-	JavaXmx         string   `json:"javaXmx"`
-	Conn            net.Conn `json:"-"` // cheers copilot
+	ServerId            string   `json:"serverId"`
+	InternalId          int      `json:"internalId"`
+	JarLocation         string   `json:"jarLocation"`
+	ScriptsLocation     string   `json:"scriptsLocation"`
+	ScriptName          string   `json:"scriptName"`
+	ScriptParams        string   `json:"scriptParams"`
+	ClientName          string   `json:"clientName"`
+	ClientPassword      string   `json:"clientPassword"`
+	AccountUsername     string   `json:"accountUsername"`
+	AccountPassword     string   `json:"accountPassword"`
+	ProxyHost           string   `json:"proxyHost"`
+	ProxyPort           int      `json:"proxyPort"`
+	ProxyUsername       string   `json:"proxyUsername"`
+	ProxyPassword       string   `json:"proxyPassword"`
+	AccountTotp         string   `json:"accountTotp"`
+	Fps                 int      `json:"fps"`
+	World               string   `json:"world"`
+	JavaXms             string   `json:"javaXms"`
+	JavaXmx             string   `json:"javaXmx"`
+	DisableBrowserProxy bool     `json:"disableBrowserProxy"`
+	Conn                net.Conn `json:"-"` // cheers copilot
 }
 
 func wrapperExists(scriptsFolder string) bool {
@@ -256,6 +257,10 @@ func startBotImpl(args startBotData) error {
 			cmdArgs = append(cmdArgs, "-remote-debugging-port="+strconv.Itoa(clientPort))
 			cmdArgs = append(cmdArgs, "-new-account-browser-login")
 			cmdArgs = append(cmdArgs, "-accountTotp", args.AccountTotp)
+		}
+
+		if args.DisableBrowserProxy {
+			cmdArgs = append(cmdArgs, "-disable-browser-proxy")
 		}
 
 		cmdArgs = append(cmdArgs, "-covert")
