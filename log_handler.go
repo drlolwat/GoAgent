@@ -22,6 +22,7 @@ var mutex = &sync.Mutex{}
 func init() {
 	logHandlers = append(logHandlers,
 		LogEvent{"has started successfully", ReportBotStatus{online: true, proxyBlocked: false}},
+		LogEvent{"High severity server response, stopping script! Response: DISABLED", ReportBan{}},
 		LogEvent{"being set to banned status", ReportBan{}},
 		LogEvent{"response: locked", ReportLock{}},
 		LogEvent{"reached target ttl and qp", ReportCompleted{}},
