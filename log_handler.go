@@ -22,8 +22,10 @@ var mutex = &sync.Mutex{}
 func init() {
 	logHandlers = append(logHandlers,
 		LogEvent{"has started successfully", ReportBotStatus{online: true, proxyBlocked: false}},
+		LogEvent{"High severity server response, stopping script! Response: DISABLED", ReportBan{}},
 		LogEvent{"being set to banned status", ReportBan{}},
 		LogEvent{"response: locked", ReportLock{}},
+		LogEvent{">>> Reached ", ReportCompleted{}}, //this sucks, but until we implement regex or something I don't think we can use wildcards in these :(
 		LogEvent{"reached target ttl and qp", ReportCompleted{}},
 		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
 		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
