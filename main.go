@@ -65,8 +65,7 @@ func handleData() {
 		}
 
 		if err != nil {
-			//log.Println(err)
-			panic(err)
+			log.Println(err)
 		}
 
 		header, data := packet.Header, packet.Data
@@ -78,8 +77,7 @@ func handleData() {
 
 		err = handlers[header](Master, data)
 		if err != nil {
-			//log.Println(err)
-			panic(err)
+			log.Println(err)
 		}
 	}
 }
