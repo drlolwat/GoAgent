@@ -173,6 +173,10 @@ func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string,
 type ReportWrapperData struct{}
 
 func (r ReportWrapperData) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+	if conn == nil {
+		return errors.New("was not connected to BotBuddy network")
+	}
+
 	data := make(map[int]map[string]interface{})
 	innerMap := make(map[string]interface{})
 
