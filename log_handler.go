@@ -33,6 +33,7 @@ func init() {
 		LogEvent{"tutorial island complete! stopping script", ReportCompleted{}},
 		LogEvent{"Thank you for using braveTutorial", ReportCompleted{}},
 		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
+		LogEvent{"CORE: Handling completion", ReportCompleted{}},
 		LogEvent{"trade unrestricted, stopping", ReportCompleted{}},
 		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
 		LogEvent{"BB_OUTPUT", ReportWrapperData{}},
