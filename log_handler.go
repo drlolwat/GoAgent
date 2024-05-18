@@ -23,7 +23,6 @@ func init() {
 	logHandlers = append(logHandlers,
 		LogEvent{"has started successfully", ReportBotStatus{online: true, proxyBlocked: false}},
 		LogEvent{"High severity server response, stopping script! Response: DISABLED", ReportBan{}},
-		//LogEvent{"being set to banned status", ReportBan{}},
 		LogEvent{"response: locked", ReportLock{}},
 		LogEvent{">>> Reached ", ReportCompleted{}}, //this sucks, but until we implement regex or something I don't think we can use wildcards in these :(
 		LogEvent{"reached target ttl and qp", ReportCompleted{}},
@@ -35,7 +34,6 @@ func init() {
 		LogEvent{"Thank you for using braveTutorial", ReportCompleted{}},
 		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
 		LogEvent{"trade unrestricted, stopping", ReportCompleted{}},
-		LogEvent{"running: none", ReportNoScript{}},
 		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
 		LogEvent{"BB_OUTPUT", ReportWrapperData{}},
 		LogEvent{"blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
@@ -161,9 +159,9 @@ type ReportNoScript struct{}
 
 func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	if GetClientUptime(internalId) >= 30 {
-		log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ".")
-		ChangeClientStatus(internalId, "NoScript")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"NoScript","Script":"%s"}`, internalId, script))
+		StopBotByInternalId(internalId)
+		log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ", stopping client.")
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Stopped","Script":"%s"}`, internalId, script))
 		if err != nil {
 			return err
 		}
