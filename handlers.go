@@ -37,6 +37,7 @@ func init() {
 		"startBot":        startBot,
 		"stopBot":         stopBot,
 		"startLink":       linkJagex,
+		"recvCompletions": recvCompletionMessage,
 	}
 
 	go func() {
@@ -105,6 +106,27 @@ func listRunningBots(conn net.Conn, _ string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type recvCompletionMessages struct {
+	Data []string `json:"data"`
+}
+
+func recvCompletionMessage(conn net.Conn, data string) error {
+	var completionMessages recvCompletionMessages
+	err := json.Unmarshal([]byte(data), &completionMessages)
+	if err != nil {
+		return err
+	}
+
+	for _, str := range completionMessages.Data {
+		str = strings.Trim(str, " ")
+		if str != "" {
+			AddCompletionHandler(str)
+		}
+	}
+
 	return nil
 }
 
