@@ -120,6 +120,8 @@ func recvCompletionMessage(conn net.Conn, data string) error {
 		return err
 	}
 
+	ClearLogHandlers()
+
 	for _, str := range completionMessages.Data {
 		str = strings.Trim(str, " ")
 		if str != "" {
