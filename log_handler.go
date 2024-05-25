@@ -15,16 +15,19 @@ import (
 type logHandler []LogEvent
 
 var logHandlers logHandler
-
 var completedLast = make(map[int]int64)
 var mutex = &sync.Mutex{}
 
 func init() {
+	AddHandlers()
+}
+
+func AddHandlers() {
 	logHandlers = append(logHandlers,
 		LogEvent{"has started successfully", ReportBotStatus{online: true, proxyBlocked: false}},
 		LogEvent{"High severity server response, stopping script! Response: DISABLED", ReportBan{}},
 		LogEvent{"response: locked", ReportLock{}},
-		LogEvent{">>> Reached ", ReportCompleted{}}, //this sucks, but until we implement regex or something I don't think we can use wildcards in these :(
+		LogEvent{">>> Reached ", ReportCompleted{}},
 		LogEvent{"reached target ttl and qp", ReportCompleted{}},
 		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
 		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
@@ -39,6 +42,22 @@ func init() {
 		LogEvent{"blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
 		LogEvent{"initialize on thread", HandleBrowser{}},
 	)
+}
+
+func ClearLogHandlers() {
+	logHandlers = logHandler{}
+	AddHandlers()
+}
+
+func AddCompletionHandler(line string) error {
+	for _, handler := range logHandlers {
+		if handler.waitingFor == line {
+			return errors.New("handler already exists")
+		}
+	}
+
+	logHandlers = append(logHandlers, LogEvent{line, ReportCompleted{}})
+	return nil
 }
 
 type LogEvent struct {
@@ -118,7 +137,7 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 
 type ReportLock struct{}
 
-func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, _, script string) error {
 	log.Println(loginName + " has been detected as " + Red + "locked" + Reset + ".")
 	ChangeClientStatus(internalId, "Locked")
 	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Locked","Script":"%s"}`, internalId, script))
