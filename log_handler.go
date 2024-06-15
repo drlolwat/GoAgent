@@ -36,6 +36,7 @@ func AddHandlers() {
 		LogEvent{"tutorial island complete! stopping script", ReportCompleted{}},
 		LogEvent{"Thank you for using braveTutorial", ReportCompleted{}},
 		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
+		LogEvent{"Finished dumping all items!", ReportCompleted{}},
 		LogEvent{"CORE: Handling completion", ReportCompleted{}},
 		LogEvent{"trade unrestricted, stopping", ReportCompleted{}},
 		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
