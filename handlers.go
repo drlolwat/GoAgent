@@ -289,7 +289,7 @@ func startBotImpl(args startBotData) error {
 
 		cmdArgs = append(cmdArgs, "-covert")
 		cmdArgs = append(cmdArgs, "-params", args.ScriptName)
-		cmdArgs = append(cmdArgs, strconv.Itoa(clientPort+1000))
+		//cmdArgs = append(cmdArgs, strconv.Itoa(clientPort+1000))
 
 		if args.ScriptParams != "" {
 			cmdArgs = append(cmdArgs, args.ScriptParams)
