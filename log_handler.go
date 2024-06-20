@@ -29,6 +29,7 @@ func AddHandlers() {
 		LogEvent{"response: locked", ReportLock{}},
 		LogEvent{">>> Reached ", ReportCompleted{}},
 		LogEvent{"reached target ttl and qp", ReportCompleted{}},
+		LogEvent{"All goals completed, or you've run out of gold! Stopping GAIO.", ReportCompleted{}},
 		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
 		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
 		LogEvent{"waio: job done", ReportCompleted{}},
