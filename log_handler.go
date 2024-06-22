@@ -38,6 +38,8 @@ func AddHandlers() {
 		LogEvent{"Thank you for using braveTutorial", ReportCompleted{}},
 		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
 		LogEvent{"Finished dumping all items!", ReportCompleted{}},
+		LogEvent{"Build: Tutorial completed", ReportCompleted{}},
+		LogEvent{"Build: Account completed", ReportCompleted{}},
 		LogEvent{"CORE: Handling completion", ReportCompleted{}},
 		LogEvent{"trade unrestricted, stopping", ReportCompleted{}},
 		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
