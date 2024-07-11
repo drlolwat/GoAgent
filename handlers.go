@@ -125,7 +125,10 @@ func recvCompletionMessage(conn net.Conn, data string) error {
 	for _, str := range completionMessages.Data {
 		str = strings.Trim(str, " ")
 		if str != "" {
-			AddCompletionHandler(str)
+			err := AddCompletionHandler(str)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -452,7 +455,7 @@ func linkJagex(_ net.Conn, data string) error {
 	password := client.LoginPass
 	totpSecret := client.LoginTotp
 
-	cmdInstallDrissionpage := exec.Command("pip", "install", "drissionpage")
+	cmdInstallDrissionpage := exec.Command("pip", "install", "DrissionPage==4.1.0.0b2")
 	err = cmdInstallDrissionpage.Run()
 	if err != nil {
 		return err
