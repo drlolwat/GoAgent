@@ -27,6 +27,7 @@ var startBotQueue = make(chan startBotData)
 
 var basePort = 9222
 var portMutex = &sync.Mutex{}
+var downloadedWrapper = false
 
 func init() {
 	handlers = handlerMap{
@@ -204,6 +205,7 @@ func downloadWrapper(scriptsFolder string) error {
 	}(out)
 
 	_, err = io.Copy(out, resp.Body)
+	downloadedWrapper = true
 	return err
 }
 
@@ -221,7 +223,7 @@ func startBot(conn net.Conn, data string) error {
 }
 
 func startBotImpl(args startBotData) error {
-	if !wrapperExists(args.ScriptsLocation) {
+	if !wrapperExists(args.ScriptsLocation) || !downloadedWrapper {
 		err := downloadWrapper(args.ScriptsLocation)
 		if err != nil {
 			return err
