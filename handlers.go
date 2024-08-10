@@ -157,7 +157,9 @@ type startBotData struct {
 	JavaXms             string   `json:"javaXms"`
 	JavaXmx             string   `json:"javaXmx"`
 	DisableBrowserProxy bool     `json:"disableBrowserProxy"`
-	Conn                net.Conn `json:"-"` // cheers copilot
+	StartMinimized      bool     `json:"minimized"`
+	RenderType          string   `json:"render"` // all "or" script "or" none
+	Conn                net.Conn `json:"-"`      // cheers copilot
 }
 
 func wrapperExists(scriptsFolder string) bool {
@@ -262,6 +264,14 @@ func startBotImpl(args startBotData) error {
 
 		if args.Fps > 0 {
 			cmdArgs = append(cmdArgs, "-fps", strconv.Itoa(args.Fps))
+		}
+
+		if args.StartMinimized {
+			cmdArgs = append(cmdArgs, "-minimized")
+		}
+
+		if args.RenderType != "" {
+			cmdArgs = append(cmdArgs, "-render", args.RenderType)
 		}
 
 		if args.ProxyHost != "" {
