@@ -493,25 +493,25 @@ func linkJagex(_ net.Conn, data string) error {
 			if scanner.Text() == "Proxy blocked by Cloudflare" {
 				err = ReportBotStatus{online: false, proxyBlocked: true}.execute(Master, args.InternalId, email, "Proxy blocked by Cloudflare", "")
 				if err != nil {
-					log.Println(err)
+					log.Println("1:", err)
 					return
 				}
 			}
 		}
 
 		if err = scanner.Err(); err != nil {
-			log.Println(err)
+			log.Println("2:", err)
 		}
 	}()
 
 	err = cmd.Start()
 	if err != nil {
-		log.Println(err)
+		log.Println("3:", err)
 	}
 
 	err = cmd.Wait()
 	if err != nil {
-		log.Println(err)
+		log.Println("4:", err)
 	}
 
 	return nil
