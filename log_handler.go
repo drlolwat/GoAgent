@@ -47,6 +47,7 @@ func AddHandlers() {
 		LogEvent{"blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
 		LogEvent{"Failed to connect to the game, retrying...", ReportBotStatus{online: false, proxyBlocked: true}},
 		LogEvent{"initialize on thread", HandleBrowser{}},
+		LogEvent{"Never successfully authed with the browser", ReportBotStatus{online: false, proxyBlocked: true}},
 	)
 }
 
