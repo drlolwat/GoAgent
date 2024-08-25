@@ -18,7 +18,8 @@ var logHandlers logHandler
 var completedLast = make(map[int]int64)
 var mutex = &sync.Mutex{}
 
-var banQueue = make(chan banMessage, 100)
+var banQueue = make(chan banMessage, 200)
+var proxyBlockedQueue = make(chan banMessage, 200)
 
 type banMessage struct {
 	conn       net.Conn
@@ -30,6 +31,7 @@ type banMessage struct {
 func init() {
 	AddHandlers()
 	go processBanQueue()
+	go processProxyBlockedQueue()
 }
 
 func AddHandlers() {
@@ -61,13 +63,36 @@ func AddHandlers() {
 	)
 }
 
-func processBanQueue() {
+func processProxyBlockedQueue() {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case msg := <-banQueue:
-			processBanMessage(msg)
-		case <-time.After(1 * time.Minute):
-			// No messages to process, continue
+		case <-ticker.C:
+			select {
+			case msg := <-proxyBlockedQueue:
+				processProxyBlockedMessage(msg)
+			default:
+				// No messages to process, continue
+			}
+		}
+	}
+}
+
+func processBanQueue() {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			select {
+			case msg := <-banQueue:
+				processBanMessage(msg)
+			default:
+				// No messages to process, continue
+			}
 		}
 	}
 }
@@ -77,6 +102,16 @@ func processBanMessage(msg banMessage) {
 	ChangeClientStatus(msg.internalId, "Banned")
 
 	err := sendEncryptedPacket(msg.conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned","Script":"%s"}`, msg.internalId, msg.script))
+	if err != nil {
+		log.Println("Error sending encrypted packet:", err)
+	}
+}
+
+func processProxyBlockedMessage(msg banMessage) {
+	log.Println(msg.loginName + " has been detected as having a " + Red + "blocked proxy" + Reset + ".")
+	ChangeClientStatus(msg.internalId, "ProxyBlocked")
+
+	err := sendEncryptedPacket(msg.conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked","Script":"%s"}`, msg.internalId, msg.script))
 	if err != nil {
 		log.Println("Error sending encrypted packet:", err)
 	}
@@ -128,6 +163,42 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 	}
 
 	if r.proxyBlocked {
+		msg := banMessage{
+			conn:       conn,
+			internalId: internalId,
+			loginName:  loginName,
+			script:     script,
+		}
+		proxyBlockedQueue <- msg
+		return nil
+	}
+
+	if r.online {
+		log.Println(loginName + " has been detected as " + Green + "running" + Reset + ".")
+		ChangeClientStatus(internalId, "Running")
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Running","Script":"%s"}`, internalId, script))
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Println(loginName + " has been detected as " + Red + "stopped" + Reset + ".")
+		ChangeClientStatus(internalId, "Stopped")
+		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Stopped","Script":"%s"}`, internalId, script))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+/*
+func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+	if conn == nil {
+		return errors.New("was not connected to BotBuddy network")
+	}
+
+	if r.proxyBlocked {
 		log.Println(loginName + " has been detected as having a " + Red + "blocked proxy" + Reset + ".")
 		ChangeClientStatus(internalId, "ProxyBlocked")
 		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked","Script":"%s"}`, internalId, script))
@@ -156,7 +227,7 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 	return nil
 }
 
-/*type ReportBan struct{}
+type ReportBan struct{}
 
 func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	if conn == nil {
