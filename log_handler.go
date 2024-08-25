@@ -18,8 +18,18 @@ var logHandlers logHandler
 var completedLast = make(map[int]int64)
 var mutex = &sync.Mutex{}
 
+var banQueue = make(chan banMessage, 100)
+
+type banMessage struct {
+	conn       net.Conn
+	internalId int
+	loginName  string
+	script     string
+}
+
 func init() {
 	AddHandlers()
+	go processBanQueue()
 }
 
 func AddHandlers() {
@@ -49,6 +59,27 @@ func AddHandlers() {
 		LogEvent{"initialize on thread", HandleBrowser{}},
 		LogEvent{"Never successfully authed with the browser", ReportBotStatus{online: false, proxyBlocked: true}},
 	)
+}
+
+func processBanQueue() {
+	for {
+		select {
+		case msg := <-banQueue:
+			processBanMessage(msg)
+		case <-time.After(1 * time.Minute):
+			// No messages to process, continue
+		}
+	}
+}
+
+func processBanMessage(msg banMessage) {
+	log.Println(msg.loginName + " has been detected as " + Red + "banned" + Reset + ".")
+	ChangeClientStatus(msg.internalId, "Banned")
+
+	err := sendEncryptedPacket(msg.conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned","Script":"%s"}`, msg.internalId, msg.script))
+	if err != nil {
+		log.Println("Error sending encrypted packet:", err)
+	}
 }
 
 func ClearLogHandlers() {
@@ -125,7 +156,7 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 	return nil
 }
 
-type ReportBan struct{}
+/*type ReportBan struct{}
 
 func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
 	if conn == nil {
@@ -139,6 +170,24 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 	if err != nil {
 		return err
 	}
+	return nil
+}*/
+
+type ReportBan struct{}
+
+func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+	if conn == nil {
+		return errors.New("was not connected to BotBuddy network")
+	}
+
+	msg := banMessage{
+		conn:       conn,
+		internalId: internalId,
+		loginName:  loginName,
+		script:     script,
+	}
+	banQueue <- msg
+
 	return nil
 }
 
