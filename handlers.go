@@ -90,7 +90,7 @@ func ping(net.Conn, string) error {
 }
 
 func listRunningBots(conn net.Conn, _ string) error {
-	runningBots := make(map[string][]map[string]string)
+	/*runningBots := make(map[string][]map[string]string)
 
 	safeClients.mux.RLock()
 	if len(safeClients.clients) == 0 {
@@ -106,7 +106,8 @@ func listRunningBots(conn net.Conn, _ string) error {
 	err := sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	if err != nil {
 		return err
-	}
+	}*/
+
 	return nil
 }
 
