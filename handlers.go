@@ -19,11 +19,17 @@ import (
 	"time"
 )
 
+type packetData struct {
+	conn net.Conn
+	data string
+}
+
 type handlerMap map[string]func(net.Conn, string) error
 
 var handlers handlerMap
 
 var startBotQueue = make(chan startBotData)
+var sendPacketQueue = make(chan packetData, 200)
 
 var basePort = 9222
 var portMutex = &sync.Mutex{}
@@ -51,6 +57,18 @@ func init() {
 			time.Sleep(1 * time.Second)
 		}
 	}()
+
+	go processAgentDataQueue()
+}
+
+func processAgentDataQueue() {
+	for packet := range sendPacketQueue {
+		err := sendEncryptedPacket(packet.conn, "agentData", packet.data)
+		if err != nil {
+			log.Println("Error sending agentData packet:", err)
+		}
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func initHandshake(conn net.Conn, data string) error {
@@ -90,7 +108,44 @@ func ping(net.Conn, string) error {
 }
 
 func listRunningBots(conn net.Conn, _ string) error {
-	/*runningBots := make(map[string][]map[string]string)
+	runningBots := make(map[string][]map[string]string)
+
+	safeClients.mux.RLock()
+	if len(safeClients.clients) == 0 {
+		runningBots[CLIENT_UUID] = []map[string]string{}
+	} else {
+		for _, client := range safeClients.clients {
+			runningBots[CLIENT_UUID] = append(runningBots[CLIENT_UUID], map[string]string{
+				"InternalId": strconv.Itoa(client.InternalId),
+				"Status":     client.Status,
+			})
+		}
+	}
+	safeClients.mux.RUnlock()
+	botChunks := chunkRunningBots(runningBots[CLIENT_UUID], 25)
+
+	for _, chunk := range botChunks {
+		runningBotsJson, _ := json.Marshal(map[string][]map[string]string{CLIENT_UUID: chunk})
+		sendPacketQueue <- packetData{conn: conn, data: string(runningBotsJson)}
+	}
+
+	return nil
+}
+
+func chunkRunningBots(bots []map[string]string, chunkSize int) [][]map[string]string {
+	var chunks [][]map[string]string
+	for i := 0; i < len(bots); i += chunkSize {
+		end := i + chunkSize
+		if end > len(bots) {
+			end = len(bots)
+		}
+		chunks = append(chunks, bots[i:end])
+	}
+	return chunks
+}
+
+/*func listRunningBots(conn net.Conn, _ string) error {
+	runningBots := make(map[string][]map[string]string)
 
 	safeClients.mux.RLock()
 	if len(safeClients.clients) == 0 {
@@ -106,10 +161,10 @@ func listRunningBots(conn net.Conn, _ string) error {
 	err := sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
 	if err != nil {
 		return err
-	}*/
+	}
 
 	return nil
-}
+}*/
 
 type recvCompletionMessages struct {
 	Data []string `json:"data"`
