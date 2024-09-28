@@ -416,7 +416,6 @@ func startBotImpl(args startBotData) error {
 		for !finished {
 			select {
 			case <-done:
-				//fmt.Println("Command finished. Log monitoring stopped.")
 				finished = true
 				break
 			case line := <-lines:
