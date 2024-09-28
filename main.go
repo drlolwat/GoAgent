@@ -17,7 +17,7 @@ var (
 	CUSTOMER_ID  *int
 	WRAPPER_JAR  = "BotBuddyWrapper-1.0-SNAPSHOT-dep-included.jar"
 	DIST_URL     = "https://dist.botbuddy.net/"
-	AGENT_VER    = "0.1"
+	AGENT_VER    = "0.2"
 	Master       net.Conn
 	KeepRetrying = true
 )
