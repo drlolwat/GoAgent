@@ -160,7 +160,17 @@ type startBotData struct {
 	DisableBrowserProxy bool     `json:"disableBrowserProxy"`
 	StartMinimized      bool     `json:"minimized"`
 	RenderType          string   `json:"render"` // all "or" script "or" none
-	Conn                net.Conn `json:"-"`      // cheers copilot
+	DebugMode           bool     `json:"debug"`
+	Destroy             bool     `json:"destroy"`
+	DisableAnimations   bool     `json:"disableAnimations"`
+	DisableModels       bool     `json:"disableModels"`
+	DisableSounds       bool     `json:"disableSounds"`
+	LowDetail           bool     `json:"lowDetail"`
+	MenuManipulation    bool     `json:"menuManipulation"`
+	NoClickWalk         bool     `json:"noClickWalk"`
+	DismissRandomEvents bool     `json:"dismissRandomEvents"`
+	Beta                bool     `json:"beta"`
+	Conn                net.Conn `json:"-"` // cheers copilot
 }
 
 func wrapperExists(scriptsFolder string) bool {
@@ -256,7 +266,6 @@ func startBotImpl(args startBotData) error {
 			args.AccountPassword,
 			"-userhome",
 			"BotBuddy/" + strconv.Itoa(args.InternalId),
-			"-destroy",
 		}
 
 		if args.World != "" {
@@ -273,6 +282,46 @@ func startBotImpl(args startBotData) error {
 
 		if args.RenderType != "" {
 			cmdArgs = append(cmdArgs, "-render", args.RenderType)
+		}
+
+		if args.Destroy {
+			cmdArgs = append(cmdArgs, "-destroy")
+		}
+
+		if args.DisableAnimations {
+			cmdArgs = append(cmdArgs, "-disableAnimations")
+		}
+
+		if args.DisableModels {
+			cmdArgs = append(cmdArgs, "-disableModels")
+		}
+
+		if args.DisableSounds {
+			cmdArgs = append(cmdArgs, "-disableSounds")
+		}
+
+		if args.LowDetail {
+			cmdArgs = append(cmdArgs, "-lowDetail")
+		}
+
+		if args.MenuManipulation {
+			cmdArgs = append(cmdArgs, "-menuManipulation")
+		}
+
+		if args.NoClickWalk {
+			cmdArgs = append(cmdArgs, "-noClickWalk")
+		}
+
+		if args.DismissRandomEvents {
+			cmdArgs = append(cmdArgs, "-dismiss-random-events")
+		}
+
+		if args.DebugMode {
+			cmdArgs = append(cmdArgs, "-debug")
+		}
+
+		if args.Beta {
+			cmdArgs = append(cmdArgs, "-beta")
 		}
 
 		if args.ProxyHost != "" {
