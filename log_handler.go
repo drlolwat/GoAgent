@@ -192,58 +192,6 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 	return nil
 }
 
-/*
-func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
-	if conn == nil {
-		return errors.New("was not connected to BotBuddy network")
-	}
-
-	if r.proxyBlocked {
-		log.Println(loginName + " has been detected as having a " + Red + "blocked proxy" + Reset + ".")
-		ChangeClientStatus(internalId, "ProxyBlocked")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"ProxyBlocked","Script":"%s"}`, internalId, script))
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if r.online {
-		log.Println(loginName + " has been detected as " + Green + "running" + Reset + ".")
-		ChangeClientStatus(internalId, "Running")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Running","Script":"%s"}`, internalId, script))
-		if err != nil {
-			return err
-		}
-	} else {
-		log.Println(loginName + " has been detected as " + Red + "stopped" + Reset + ".")
-		ChangeClientStatus(internalId, "Stopped")
-		err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Stopped","Script":"%s"}`, internalId, script))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-type ReportBan struct{}
-
-func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
-	if conn == nil {
-		return errors.New("was not connected to BotBuddy network")
-	}
-
-	log.Println(loginName + " has been detected as " + Red + "banned" + Reset + ".")
-	ChangeClientStatus(internalId, "Banned")
-
-	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Banned","Script":"%s"}`, internalId, script))
-	if err != nil {
-		return err
-	}
-	return nil
-}*/
-
 type ReportBan struct{}
 
 func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
