@@ -29,38 +29,8 @@ type banMessage struct {
 }
 
 func init() {
-	AddHandlers()
 	go processBanQueue()
 	go processProxyBlockedQueue()
-}
-
-func AddHandlers() {
-	logHandlers = append(logHandlers,
-		LogEvent{"has started successfully", ReportBotStatus{online: true, proxyBlocked: false}},
-		LogEvent{"High severity server response, stopping script! Response: DISABLED", ReportBan{}},
-		LogEvent{"response: locked", ReportLock{}},
-		LogEvent{">>> Reached ", ReportCompleted{}},
-		LogEvent{"reached target ttl and qp", ReportCompleted{}},
-		LogEvent{"All goals completed, or you've run out of gold! Stopping GAIO.", ReportCompleted{}},
-		LogEvent{"reached non-99 target levels and qp", ReportCompleted{}},
-		LogEvent{"SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
-		LogEvent{"waio: job done", ReportCompleted{}},
-		LogEvent{"[ACTION] Stop Script", ReportCompleted{}},
-		LogEvent{"tutorial island complete! stopping script", ReportCompleted{}},
-		LogEvent{"Thank you for using braveTutorial", ReportCompleted{}},
-		LogEvent{"you have completed all your quest tasks", ReportCompleted{}},
-		LogEvent{"Finished dumping all items!", ReportCompleted{}},
-		LogEvent{"Build: Tutorial completed", ReportCompleted{}},
-		LogEvent{"Build: Account completed", ReportCompleted{}},
-		LogEvent{"CORE: Handling completion", ReportCompleted{}},
-		LogEvent{"trade unrestricted, stopping", ReportCompleted{}},
-		LogEvent{"there was a problem authorizing your account", ReportNoScript{}},
-		LogEvent{"BB_OUTPUT", ReportWrapperData{}},
-		LogEvent{"blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
-		LogEvent{"Failed to connect to the game, retrying...", ReportBotStatus{online: false, proxyBlocked: true}},
-		LogEvent{"initialize on thread", HandleBrowser{}},
-		LogEvent{"Never successfully authed with the browser", ReportBotStatus{online: false, proxyBlocked: true}},
-	)
 }
 
 func processProxyBlockedQueue() {
@@ -119,21 +89,20 @@ func processProxyBlockedMessage(msg banMessage) {
 
 func ClearLogHandlers() {
 	logHandlers = logHandler{}
-	AddHandlers()
 }
 
-func AddCompletionHandler(line string) error {
+func AddCompletionHandler(scriptName, line string) {
 	for _, handler := range logHandlers {
-		if handler.waitingFor == line {
-			return errors.New("handler already exists")
+		if handler.scriptName == scriptName && handler.waitingFor == line {
+			log.Println("handler already exists: ", scriptName, line)
 		}
 	}
 
-	logHandlers = append(logHandlers, LogEvent{line, ReportCompleted{}})
-	return nil
+	logHandlers = append(logHandlers, LogEvent{scriptName, line, ReportCompleted{}})
 }
 
 type LogEvent struct {
+	scriptName string
 	waitingFor string
 	action     Action
 }
