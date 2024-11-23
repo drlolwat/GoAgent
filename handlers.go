@@ -427,7 +427,7 @@ func startBotImpl(args startBotData) error {
 			case line := <-lines:
 				if len(logHandlers) > 0 {
 					for _, l := range logHandlers {
-						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) && args.ScriptName == l.scriptName {
+						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) && (args.ScriptName == l.scriptName || l.scriptName == "botbuddy_system") {
 							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName)
 							if err != nil {
 								go func() {
