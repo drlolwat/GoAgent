@@ -101,13 +101,13 @@ func ClearLogHandlers() {
 		LogEvent{"botbuddy_system", "initialize on thread", HandleBrowser{}},
 		LogEvent{"botbuddy_system", "Never successfully authed with the browser", ReportBotStatus{online: false, proxyBlocked: true}},
 	)
-
 }
 
 func AddCompletionHandler(scriptName, line string) {
 	for _, handler := range logHandlers {
 		if handler.scriptName == scriptName && handler.waitingFor == line {
 			log.Println("handler already exists: ", scriptName, line)
+			return
 		}
 	}
 
