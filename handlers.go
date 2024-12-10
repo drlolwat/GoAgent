@@ -170,6 +170,7 @@ type startBotData struct {
 	NoClickWalk         bool     `json:"noClickWalk"`
 	DismissRandomEvents bool     `json:"dismissRandomEvents"`
 	Beta                bool     `json:"beta"`
+	AccountPin          string   `json:"accountPin"`
 	Conn                net.Conn `json:"-"` // cheers copilot
 }
 
@@ -268,6 +269,10 @@ func startBotImpl(args startBotData) error {
 			args.AccountPassword,
 			"-userhome",
 			"BotBuddy/" + strconv.Itoa(args.InternalId),
+		}
+
+		if len(args.AccountPin) == 4 {
+			cmdArgs = append(cmdArgs, "-accountPin", args.AccountPin)
 		}
 
 		if args.World != "" {
