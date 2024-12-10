@@ -89,19 +89,6 @@ func processProxyBlockedMessage(msg banMessage) {
 
 func ClearLogHandlers() {
 	logHandlers = logHandler{}
-
-	logHandlers = append(logHandlers,
-		LogEvent{"botbuddy_system", "has started successfully", ReportBotStatus{online: true, proxyBlocked: false}},
-		LogEvent{"botbuddy_system", "High severity server response, stopping script! Response: DISABLED", ReportBan{}},
-		LogEvent{"botbuddy_system", "response: locked", ReportLock{}},
-		LogEvent{"botbuddy_system", "there was a problem authorizing your account", ReportNoScript{}},
-		LogEvent{"botbuddy_system", "BB_OUTPUT", ReportWrapperData{}},
-		LogEvent{"botbuddy_system", "blocked from the game", ReportBotStatus{online: false, proxyBlocked: true}},
-		LogEvent{"botbuddy_system", "Failed to connect to the game, retrying...", ReportBotStatus{online: false, proxyBlocked: true}},
-		LogEvent{"botbuddy_system", "initialize on thread", HandleBrowser{}},
-		LogEvent{"botbuddy_system", "Never successfully authed with the browser", ReportBotStatus{online: false, proxyBlocked: true}},
-	)
-
 }
 
 func AddCompletionHandler(scriptName, line string) {
