@@ -111,11 +111,16 @@ func listRunningBots(conn net.Conn, _ string) error {
 	return nil
 }
 
-type recvCompletionMessages struct {
-	Data []string `json:"data"`
+type CompletionMessage struct {
+	ScriptName string `json:"scriptName"`
+	Message    string `json:"message"`
 }
 
-func recvCompletionMessage(conn net.Conn, data string) error {
+type recvCompletionMessages struct {
+	Data []CompletionMessage `json:"data"`
+}
+
+func recvCompletionMessage(_ net.Conn, data string) error {
 	var completionMessages recvCompletionMessages
 	err := json.Unmarshal([]byte(data), &completionMessages)
 	if err != nil {
@@ -124,10 +129,11 @@ func recvCompletionMessage(conn net.Conn, data string) error {
 
 	ClearLogHandlers()
 
-	for _, str := range completionMessages.Data {
-		str = strings.Trim(str, " ")
-		if str != "" {
-			err := AddCompletionHandler(str)
+	for _, item := range completionMessages.Data {
+		scriptName := strings.TrimSpace(item.ScriptName)
+		message := strings.TrimSpace(item.Message)
+		if scriptName != "" && message != "" {
+			err := AddCompletionHandler(scriptName, message)
 			if err != nil {
 				return err
 			}
@@ -422,7 +428,7 @@ func startBotImpl(args startBotData) error {
 			case line := <-lines:
 				if len(logHandlers) > 0 {
 					for _, l := range logHandlers {
-						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) {
+						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) && args.ScriptName == l.scriptName {
 							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName)
 							if err != nil {
 								go func() {
