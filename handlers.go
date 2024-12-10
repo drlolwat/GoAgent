@@ -137,7 +137,7 @@ func recvCompletionMessage(_ net.Conn, data string) error {
 		}
 	}
 
-	fmt.Println(Green + "Received completions from master" + Reset)
+	log.Println(Green + "Received completions from master" + Reset)
 
 	return nil
 }
