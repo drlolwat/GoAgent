@@ -274,9 +274,9 @@ func startBotImpl(args startBotData) error {
 			"BotBuddy/" + strconv.Itoa(args.InternalId),
 		}
 
-		//if len(args.AccountPin) == 4 {
-		//	cmdArgs = append(cmdArgs, "-accountPin", args.AccountPin)
-		//}
+		if len(args.AccountPin) == 4 {
+			cmdArgs = append(cmdArgs, "-accountPin", args.AccountPin)
+		}
 
 		if args.World != "" {
 			cmdArgs = append(cmdArgs, "-world", args.World)
