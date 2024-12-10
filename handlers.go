@@ -133,10 +133,7 @@ func recvCompletionMessage(_ net.Conn, data string) error {
 		scriptName := strings.TrimSpace(item.ScriptName)
 		message := strings.TrimSpace(item.Message)
 		if scriptName != "" && message != "" {
-			err := AddCompletionHandler(scriptName, message)
-			if err != nil {
-				return err
-			}
+			AddCompletionHandler(scriptName, message)
 		}
 	}
 
