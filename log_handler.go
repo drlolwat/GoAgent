@@ -100,6 +100,23 @@ func ClearLogHandlers() {
 		LogEvent{"botbuddy_system", "Failed to connect to the game, retrying...", ReportBotStatus{online: false, proxyBlocked: true}},
 		LogEvent{"botbuddy_system", "initialize on thread", HandleBrowser{}},
 		LogEvent{"botbuddy_system", "Never successfully authed with the browser", ReportBotStatus{online: false, proxyBlocked: true}},
+
+		// default handlers
+		LogEvent{"botbuddy_system", ">>> Reached ", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "reached target ttl and qp", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "All goals completed, or you've run out of gold! Stopping GAIO.", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "reached non-99 target levels and qp", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "SCRIPT HAS COMPLETED. THANKS FOR RUNNING!", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "waio: job done", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "[ACTION] Stop Script", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "tutorial island complete! stopping script", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "Thank you for using braveTutorial", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "you have completed all your quest tasks", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "Finished dumping all items!", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "Build: Tutorial completed", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "Build: Account completed", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "CORE: Handling completion", ReportCompleted{}},
+		LogEvent{"botbuddy_system", "trade unrestricted, stopping", ReportCompleted{}},
 	)
 }
 
