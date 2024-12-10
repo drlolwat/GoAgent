@@ -259,8 +259,6 @@ func startBotImpl(args startBotData) error {
 			"BotBuddyWrapper",
 			"-username",
 			args.ClientName,
-			"-accountNickname",
-			strconv.Itoa(args.InternalId),
 			"-password",
 			args.ClientPassword,
 			"-accountUsername",
