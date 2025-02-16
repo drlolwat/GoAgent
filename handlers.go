@@ -316,10 +316,14 @@ func startBotImpl(args startBotData) error {
 
 		if args.MenuManipulation {
 			cmdArgs = append(cmdArgs, "-menuManipulation")
+		} else {
+			cmdArgs = append(cmdArgs, "-disableMenuManipulation")
 		}
 
 		if args.NoClickWalk {
 			cmdArgs = append(cmdArgs, "-noClickWalk")
+		} else {
+			cmdArgs = append(cmdArgs, "-disableNoClickWalk")
 		}
 
 		if args.DismissRandomEvents {
