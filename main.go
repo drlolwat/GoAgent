@@ -88,7 +88,7 @@ func reconnect() (net.Conn, error) {
 	CUSTOMER_ID = nil
 
 	for {
-		Master, err = net.Dial("tcp", "bbaas.botbuddy.net:7888")
+		Master, err = net.Dial("tcp", "master.botbuddy.net:7888")
 		if err == nil {
 			return Master, nil
 		}
