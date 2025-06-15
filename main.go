@@ -15,7 +15,7 @@ var (
 	CLIENT_UUID  = "CLIENT_UUID_HERE"
 	CLIENT_KEY   = "CLIENT_KEY_HERE"
 	CUSTOMER_ID  *int
-	WRAPPER_JAR  = "BotBuddyWrapper-1.0-SNAPSHOT-dep-included.jar"
+	WRAPPER_JAR  = "BotBuddyWrapper-2.0-dist.jar"
 	DIST_URL     = "https://dist.botbuddy.net/"
 	AGENT_VER    = "0.2"
 	Master       net.Conn
