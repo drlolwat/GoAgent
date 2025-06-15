@@ -38,6 +38,7 @@ func init() {
 		"startBot":        startBot,
 		"stopBot":         stopBot,
 		"startLink":       linkJagex,
+		"startLinkMailTm": linkJagexMailTm,
 		"recvCompletions": recvCompletionMessage,
 	}
 
@@ -432,13 +433,13 @@ func startBotImpl(args startBotData) error {
 				if len(logHandlers) > 0 {
 					for _, l := range logHandlers {
 						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) && (args.ScriptName == l.scriptName || l.scriptName == "botbuddy_system") {
-							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName)
+							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName, totp)
 							if err != nil {
 								go func() {
 									success := false
 									for !success {
 										time.Sleep(time.Second)
-										err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName)
+										err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName, totp)
 										if err == nil {
 											success = true
 										}
@@ -465,7 +466,7 @@ func sendProcessExitNotification(conn net.Conn, internalId int, loginName string
 		err := ReportBotStatus{
 			online:       false,
 			proxyBlocked: false,
-		}.execute(conn, internalId, loginName, "", script)
+		}.execute(conn, internalId, loginName, "", script, "")
 
 		if err != nil {
 			log.Println(err)
@@ -554,7 +555,87 @@ func linkJagex(_ net.Conn, data string) error {
 	go func() {
 		for scanner.Scan() {
 			if scanner.Text() == "Proxy blocked by Cloudflare" {
-				err = ReportBotStatus{online: false, proxyBlocked: true}.execute(Master, args.InternalId, email, "Proxy blocked by Cloudflare", "")
+				err = ReportBotStatus{online: false, proxyBlocked: true}.execute(Master, args.InternalId, email, "Proxy blocked by Cloudflare", "", "")
+				if err != nil {
+					log.Println("1:", err)
+					return
+				}
+			}
+		}
+
+		if err = scanner.Err(); err != nil {
+			log.Println("2:", err)
+		}
+	}()
+
+	err = cmd.Start()
+	if err != nil {
+		log.Println("3:", err)
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		log.Println("4:", err)
+	}
+
+	return nil
+}
+
+func linkJagexMailTm(_ net.Conn, data string) error {
+	var args linkJagexData
+	err := json.Unmarshal([]byte(data), &args)
+	if err != nil {
+		return err
+	}
+
+	safeClients.mux.RLock()
+	client, exists := safeClients.clients[args.InternalId]
+	safeClients.mux.RUnlock()
+
+	if !exists {
+		fmt.Println("Client with internalId", args.InternalId, "does not exist")
+		return errors.New("client does not exist")
+	}
+
+	if client.HandledLogin {
+		return nil
+	}
+
+	client.HandledLogin = true
+	safeClients.mux.Lock()
+	safeClients.clients[args.InternalId] = client
+	safeClients.mux.Unlock()
+
+	port := client.Port
+	email := client.LoginName
+	password := client.LoginPass
+	mailTmPass := strings.Split(client.LoginTotp, ":")[1] // format is "mailtm:password"
+
+	cmdInstallDrissionpage := exec.Command("pip", "install", "DrissionPage==4.1.0.0b2")
+	err = cmdInstallDrissionpage.Run()
+	if err != nil {
+		return err
+	}
+
+	cmdInstallPyotp := exec.Command("pip", "install", "pyotp")
+	err = cmdInstallPyotp.Run()
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(3 * time.Second)
+
+	cmd := exec.Command("python", "-c", args.Payload, "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_mail_password", mailTmPass)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	go func() {
+		for scanner.Scan() {
+			if scanner.Text() == "Proxy blocked by Cloudflare" {
+				err = ReportBotStatus{online: false, proxyBlocked: true}.execute(Master, args.InternalId, email, "Proxy blocked by Cloudflare", "", "")
 				if err != nil {
 					log.Println("1:", err)
 					return

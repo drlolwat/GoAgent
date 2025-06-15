@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -138,13 +137,19 @@ type LogEvent struct {
 }
 
 type Action interface {
-	execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error
+	execute(conn net.Conn, internalId int, loginName string, logLine string, script string, clientTotp string) error
 }
 
 type HandleBrowser struct{}
 
-func (h HandleBrowser) execute(conn net.Conn, internalId int, _ string, _ string, _ string) error {
-	err := sendEncryptedPacket(conn, "requestLink", "{\"internalId\":"+strconv.Itoa(internalId)+"}")
+func (h HandleBrowser) execute(conn net.Conn, internalId int, _ string, _ string, _ string, clientTotp string) error {
+	authType := "totp"
+	if strings.HasPrefix(clientTotp, "mailtm:") {
+		authType = "mail"
+	}
+
+	payload := fmt.Sprintf(`{"internalId":%d,"authType":"%s"}`, internalId, authType)
+	err := sendEncryptedPacket(conn, "requestLink", payload)
 	if err != nil {
 		return err
 	}
@@ -156,7 +161,7 @@ type ReportBotStatus struct {
 	proxyBlocked bool
 }
 
-func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string, logLine string, script string, _ string) error {
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
@@ -193,7 +198,7 @@ func (r ReportBotStatus) execute(conn net.Conn, internalId int, loginName string
 
 type ReportBan struct{}
 
-func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logLine string, script string, _ string) error {
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
@@ -211,7 +216,7 @@ func (r ReportBan) execute(conn net.Conn, internalId int, loginName string, logL
 
 type ReportLock struct{}
 
-func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, _, script string) error {
+func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, _, script string, _ string) error {
 	log.Println(loginName + " has been detected as " + Red + "locked" + Reset + ".")
 	ChangeClientStatus(internalId, "Locked")
 	err := sendEncryptedPacket(conn, "updateBot", fmt.Sprintf(`{"Id":%d,"Status":"Locked","Script":"%s"}`, internalId, script))
@@ -223,7 +228,7 @@ func (r ReportLock) execute(conn net.Conn, internalId int, loginName string, _, 
 
 type ReportCompleted struct{}
 
-func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string, logLine string, script string, _ string) error {
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
@@ -250,7 +255,7 @@ func (r ReportCompleted) execute(conn net.Conn, internalId int, loginName string
 
 type ReportNoScript struct{}
 
-func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string, logLine string, script string, _ string) error {
 	if GetClientUptime(internalId) >= 30 {
 		StopBotByInternalId(internalId)
 		log.Println(loginName + " has been detected as " + Red + "scriptless" + Reset + ", stopping client.")
@@ -265,7 +270,7 @@ func (r ReportNoScript) execute(conn net.Conn, internalId int, loginName string,
 
 type ReportWrapperData struct{}
 
-func (r ReportWrapperData) execute(conn net.Conn, internalId int, loginName string, logLine string, script string) error {
+func (r ReportWrapperData) execute(conn net.Conn, internalId int, loginName string, logLine string, _ string, _ string) error {
 	if conn == nil {
 		return errors.New("was not connected to BotBuddy network")
 	}
