@@ -188,23 +188,24 @@ func wrapperExists(scriptsFolder string) bool {
 
 func downloadWrapper(scriptsFolder string) error {
 	log.Println("Downloading BotBuddy wrapper...")
-	filePath := filepath.Join(scriptsFolder, WRAPPER_JAR)
-
-	// If the file exists, delete it
-	if _, err := os.Stat(filePath); err == nil {
-		err = os.Remove(filePath)
-		if err != nil {
-			return err
+	pattern := filepath.Join(scriptsFolder, "BotBuddyWrapper*.jar")
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	for _, file := range matches {
+		if err := os.Remove(file); err != nil {
+			log.Printf("Failed to remove %s: %v", file, err)
 		}
 	}
 
-	// Download the file
+	filePath := filepath.Join(scriptsFolder, WRAPPER_JAR)
+
 	url := DIST_URL + "/" + WRAPPER_JAR
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
-
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
@@ -216,7 +217,6 @@ func downloadWrapper(scriptsFolder string) error {
 	if err != nil {
 		return err
 	}
-
 	defer func(out *os.File) {
 		err := out.Close()
 		if err != nil {
