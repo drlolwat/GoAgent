@@ -625,7 +625,7 @@ func linkJagexMailTm(_ net.Conn, data string) error {
 
 	time.Sleep(3 * time.Second)
 
-	cmd := exec.Command("python", "-c", args.Payload, "--port", strconv.Itoa(port), "--email", email, "--password", password, "--totp_mail_password", mailTmPass)
+	cmd := exec.Command("python", "-c", args.Payload, "--port", strconv.Itoa(port), "--email", email, "--password", password, "--mail_password", mailTmPass)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
