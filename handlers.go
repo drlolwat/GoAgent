@@ -339,6 +339,9 @@ func startBotImpl(args startBotData) error {
 			cmdArgs = append(cmdArgs, "-beta")
 		}
 
+		// vanilla
+		cmdArgs = append(cmdArgs, "-vanilla")
+
 		if args.ProxyHost != "" {
 			cmdArgs = append(cmdArgs, "-proxyHost", args.ProxyHost)
 			cmdArgs = append(cmdArgs, "-proxyPort", strconv.Itoa(args.ProxyPort))
