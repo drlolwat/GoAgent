@@ -76,12 +76,10 @@ func handleData() {
 			continue
 		}
 
-		go func() {
-			err = handlers[header](Master, data)
-			if err != nil {
-				log.Println(err)
-			}
-		}()
+		err = handlers[header](Master, data)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
 
