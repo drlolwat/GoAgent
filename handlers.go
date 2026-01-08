@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 type handlerMap map[string]func(net.Conn, string) error
@@ -256,6 +259,9 @@ func startBotImpl(args startBotData) error {
 
 	go func(args startBotData) {
 		time.Sleep(1 * time.Second)
+
+		userhome := "BotBuddy/" + strconv.Itoa(args.InternalId)
+
 		cmdArgs := []string{
 			"-Xms" + args.JavaXms,
 			"-Xmx" + args.JavaXmx,
@@ -272,7 +278,7 @@ func startBotImpl(args startBotData) error {
 			"-accountPassword",
 			args.AccountPassword,
 			"-userhome",
-			"BotBuddy/" + strconv.Itoa(args.InternalId),
+			userhome,
 		}
 
 		if len(args.AccountPin) == 4 {
@@ -335,13 +341,6 @@ func startBotImpl(args startBotData) error {
 			cmdArgs = append(cmdArgs, "-debug")
 		}
 
-		if args.Beta {
-			cmdArgs = append(cmdArgs, "-beta")
-		}
-
-		// vanilla
-		cmdArgs = append(cmdArgs, "-vanilla")
-
 		if args.ProxyHost != "" {
 			cmdArgs = append(cmdArgs, "-proxyHost", args.ProxyHost)
 			cmdArgs = append(cmdArgs, "-proxyPort", strconv.Itoa(args.ProxyPort))
@@ -397,7 +396,21 @@ func startBotImpl(args startBotData) error {
 			return
 		}
 
-		pid := cmd.Process.Pid
+		launcherPID := int32(cmd.Process.Pid)
+		pid := int(launcherPID)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		portMatch := 0
+		if args.AccountTotp != "" {
+			portMatch = clientPort
+		}
+
+		realPID, err := findRealClientPID(ctx, launcherPID, userhome, portMatch)
+		if err == nil && realPID != 0 {
+			pid = int(realPID)
+		}
 
 		totp := ""
 		if args.AccountTotp != "" {
@@ -415,9 +428,6 @@ func startBotImpl(args startBotData) error {
 			for scanner.Scan() {
 				lines <- scanner.Text()
 			}
-			if err := scanner.Err(); err != nil {
-				//fmt.Printf("Error reading from stdout pipe: %v\n", err)
-			}
 			close(lines)
 		}()
 
@@ -432,7 +442,11 @@ func startBotImpl(args startBotData) error {
 			case <-done:
 				finished = true
 				break
-			case line := <-lines:
+			case line, ok := <-lines:
+				if !ok {
+					finished = true
+					break
+				}
 				if len(logHandlers) > 0 {
 					for _, l := range logHandlers {
 						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) && (args.ScriptName == l.scriptName || l.scriptName == "botbuddy_system") {
@@ -662,4 +676,53 @@ func linkJagexMailTm(_ net.Conn, data string) error {
 	}
 
 	return nil
+}
+
+func findRealClientPID(ctx context.Context, launcherPID int32, userhome string, debugPort int) (int32, error) {
+	userhomeNeedle := "-userhome " + userhome
+	portNeedle := ""
+	if debugPort > 0 {
+		portNeedle = "-remote-debugging-port=" + strconv.Itoa(debugPort)
+	}
+
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+		}
+
+		procs, _ := process.Processes()
+		var best int32
+		for _, p := range procs {
+			cmdline, err := p.Cmdline()
+			if err != nil || cmdline == "" {
+				continue
+			}
+			lc := strings.ToLower(cmdline)
+			if !strings.Contains(lc, strings.ToLower(userhomeNeedle)) {
+				continue
+			}
+			if portNeedle != "" && !strings.Contains(lc, strings.ToLower(portNeedle)) {
+				continue
+			}
+
+			ppid, _ := p.Ppid()
+			if ppid == launcherPID {
+				return p.Pid, nil
+			}
+
+			if best == 0 {
+				best = p.Pid
+			}
+		}
+
+		if best != 0 {
+			return best, nil
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
+	return 0, errors.New("real client pid not found")
 }
