@@ -89,7 +89,7 @@ func ping(net.Conn, string) error {
 	return nil
 }
 
-func listRunningBots(conn net.Conn, _ string) error {
+func listRunningBots(_ net.Conn, _ string) error {
 	return nil
 }
 
@@ -757,48 +757,4 @@ func latestFileInDir(dir string) (string, time.Time, error) {
 		return "", time.Time{}, errors.New("no files in log dir")
 	}
 	return bestPath, bestMod, nil
-}
-
-func tailFileFromEnd(ctx context.Context, path string, lines chan<- string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-
-	_, err = f.Seek(0, io.SeekEnd)
-	if err != nil {
-		return err
-	}
-
-	reader := bufio.NewReader(f)
-	buf := make([]byte, 0, 4096)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		b, err := reader.ReadByte()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				time.Sleep(150 * time.Millisecond)
-				continue
-			}
-			return err
-		}
-
-		if b == '\n' {
-			if len(buf) > 0 && buf[len(buf)-1] == '\r' {
-				buf = buf[:len(buf)-1]
-			}
-			lines <- string(buf)
-			buf = buf[:0]
-			continue
-		}
-
-		buf = append(buf, b)
-	}
 }
