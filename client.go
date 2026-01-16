@@ -1,11 +1,15 @@
 package main
 
 import (
+	"log"
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 type Client struct {
@@ -66,24 +70,11 @@ func RemoveClientByInternalId(internalId int) {
 func StopBotByInternalId(internalId int) {
 	safeClients.mux.Lock()
 	if client, exists := safeClients.clients[internalId]; exists {
-		killProcess(client.Pid)
+		killProcess(internalId, client.LoginName)
 		delete(safeClients.clients, internalId)
 	}
+
 	safeClients.mux.Unlock()
-}
-
-func killProcess(pid int) {
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(pid))
-	} else {
-		cmd = exec.Command("setsid", "kill", "-9", strconv.Itoa(pid))
-	}
-
-	err := cmd.Run()
-	if err != nil {
-		return
-	}
 }
 
 func ChangeClientStatus(internalId int, newStatus string) {
@@ -102,4 +93,65 @@ func GetClientUptime(internalId int) int64 {
 		return time.Now().Unix() - client.StartedAt
 	}
 	return -1
+}
+
+func killProcess(internalId int, email string) {
+	userhome := "BotBuddy/" + strconv.Itoa(internalId)
+
+	var pids []int32
+	procs, err := process.Processes()
+	if err == nil {
+		for _, p := range procs {
+			name, _ := p.Name()
+			if name != "" && !strings.Contains(strings.ToLower(name), "java") {
+				continue
+			}
+
+			cmdline, err := p.Cmdline()
+			if err != nil || cmdline == "" {
+				continue
+			}
+
+			if strings.Contains(strings.ToLower(cmdline), strings.ToLower(userhome)) {
+				pids = append(pids, p.Pid)
+			}
+		}
+	}
+
+	if len(pids) == 0 {
+		return
+	}
+
+	for _, pid := range pids {
+		var cmd *exec.Cmd
+		if runtime.GOOS == "windows" {
+			cmd = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(int(pid)))
+		} else {
+			cmd = exec.Command("kill", "-9", strconv.Itoa(int(pid)))
+		}
+		_ = cmd.Run()
+	}
+
+	time.Sleep(3 * time.Second)
+
+	stillRunning := false
+	for _, pid := range pids {
+		p, err := process.NewProcess(pid)
+		if err != nil {
+			continue
+		}
+		r, err := p.IsRunning()
+		if err == nil && r {
+			stillRunning = true
+			break
+		}
+	}
+
+	if !stillRunning {
+		err := ReportBotStatus{online: false, proxyBlocked: false}.execute(Master, internalId, email, "Client killed successfully", "", "")
+		if err != nil {
+			log.Println("1:", err)
+			return
+		}
+	}
 }
