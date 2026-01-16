@@ -18,8 +18,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/shirou/gopsutil/v3/process"
 )
 
 type handlerMap map[string]func(net.Conn, string) error
@@ -51,7 +49,6 @@ func init() {
 			if err != nil {
 				log.Println(Red+"Error starting bot:", err, Reset)
 			}
-
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -85,7 +82,6 @@ func handshakeOk(_ net.Conn, data string) error {
 	if *CUSTOMER_ID > 0 {
 		log.Println(Green + "Connected to BotBuddy network." + Reset)
 	}
-
 	return nil
 }
 
@@ -94,24 +90,6 @@ func ping(net.Conn, string) error {
 }
 
 func listRunningBots(conn net.Conn, _ string) error {
-	/*runningBots := make(map[string][]map[string]string)
-
-	safeClients.mux.RLock()
-	if len(safeClients.clients) == 0 {
-		runningBots[CLIENT_UUID] = []map[string]string{}
-	} else {
-		for _, client := range safeClients.clients {
-			runningBots[CLIENT_UUID] = append(runningBots[CLIENT_UUID], map[string]string{strconv.Itoa(client.InternalId): client.Status})
-		}
-	}
-	safeClients.mux.RUnlock()
-
-	runningBotsJson, _ := json.Marshal(runningBots)
-	err := sendEncryptedPacket(conn, "agentData", string(runningBotsJson))
-	if err != nil {
-		return err
-	}*/
-
 	return nil
 }
 
@@ -168,7 +146,7 @@ type startBotData struct {
 	JavaXmx             string   `json:"javaXmx"`
 	DisableBrowserProxy bool     `json:"disableBrowserProxy"`
 	StartMinimized      bool     `json:"minimized"`
-	RenderType          string   `json:"render"` // all "or" script "or" none
+	RenderType          string   `json:"render"`
 	DebugMode           bool     `json:"debug"`
 	Destroy             bool     `json:"destroy"`
 	DisableAnimations   bool     `json:"disableAnimations"`
@@ -180,7 +158,7 @@ type startBotData struct {
 	DismissRandomEvents bool     `json:"dismissRandomEvents"`
 	Beta                bool     `json:"beta"`
 	AccountPin          string   `json:"accountPin"`
-	Conn                net.Conn `json:"-"` // cheers copilot
+	Conn                net.Conn `json:"-"`
 }
 
 func wrapperExists(scriptsFolder string) bool {
@@ -210,10 +188,7 @@ func downloadWrapper(scriptsFolder string) error {
 		return err
 	}
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-
-		}
+		_ = Body.Close()
 	}(resp.Body)
 
 	out, err := os.Create(filePath)
@@ -221,10 +196,7 @@ func downloadWrapper(scriptsFolder string) error {
 		return err
 	}
 	defer func(out *os.File) {
-		err := out.Close()
-		if err != nil {
-
-		}
+		_ = out.Close()
 	}(out)
 
 	_, err = io.Copy(out, resp.Body)
@@ -245,7 +217,79 @@ func startBot(conn net.Conn, data string) error {
 	return nil
 }
 
+func waitForNewestLogFile(ctx context.Context, dir string, timeout time.Duration) (string, time.Time, error) {
+	deadline := time.Now().Add(timeout)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return "", time.Time{}, ctx.Err()
+		default:
+		}
+
+		path, mod, err := latestFileInDir(dir)
+		if err == nil && path != "" {
+			return path, mod, nil
+		}
+
+		if time.Now().After(deadline) {
+			if err != nil {
+				return "", time.Time{}, err
+			}
+			return "", time.Time{}, errors.New("no log file found")
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
+func tailSpecificFileFromEnd(ctx context.Context, path string, out chan<- string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	_, err = f.Seek(0, io.SeekEnd)
+	if err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(f)
+	buf := make([]byte, 0, 4096)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		b, err := reader.ReadByte()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				time.Sleep(150 * time.Millisecond)
+				continue
+			}
+			return err
+		}
+
+		if b == '\n' {
+			if len(buf) > 0 && buf[len(buf)-1] == '\r' {
+				buf = buf[:len(buf)-1]
+			}
+			out <- string(buf)
+			buf = buf[:0]
+			continue
+		}
+
+		buf = append(buf, b)
+	}
+}
+
 func startBotImpl(args startBotData) error {
+	//log.Println("STARTBOTIMPL MARKER 2026-01-15 A", args.InternalId, args.AccountUsername)
+
 	if !wrapperExists(args.ScriptsLocation) || !downloadedWrapper {
 		err := downloadWrapper(args.ScriptsLocation)
 		if err != nil {
@@ -284,71 +328,55 @@ func startBotImpl(args startBotData) error {
 		if len(args.AccountPin) == 4 {
 			cmdArgs = append(cmdArgs, "-accountPin", args.AccountPin)
 		}
-
 		if args.World != "" {
 			cmdArgs = append(cmdArgs, "-world", args.World)
 		}
-
 		if args.Fps > 0 {
 			cmdArgs = append(cmdArgs, "-fps", strconv.Itoa(args.Fps))
 		}
-
 		if args.StartMinimized {
 			cmdArgs = append(cmdArgs, "-minimized")
 		}
-
 		if args.RenderType != "" {
 			cmdArgs = append(cmdArgs, "-render", args.RenderType)
 		}
-
 		if args.Destroy {
 			cmdArgs = append(cmdArgs, "-destroy")
 		}
-
 		if args.DisableAnimations {
 			cmdArgs = append(cmdArgs, "-disableAnimations")
 		}
-
 		if args.DisableModels {
 			cmdArgs = append(cmdArgs, "-disableModels")
 		}
-
 		if args.DisableSounds {
 			cmdArgs = append(cmdArgs, "-disableSounds")
 		}
-
 		if args.LowDetail {
 			cmdArgs = append(cmdArgs, "-lowDetail")
 		}
-
 		if args.MenuManipulation {
 			cmdArgs = append(cmdArgs, "-menuManipulation")
 		} else {
 			cmdArgs = append(cmdArgs, "-disableMenuManipulation")
 		}
-
 		if args.NoClickWalk {
 			cmdArgs = append(cmdArgs, "-noClickWalk")
 		} else {
 			cmdArgs = append(cmdArgs, "-disableNoClickWalk")
 		}
-
 		if args.DismissRandomEvents {
 			cmdArgs = append(cmdArgs, "-dismiss-random-events")
 		}
 
-		if args.DebugMode {
-			cmdArgs = append(cmdArgs, "-debug")
-		}
+		cmdArgs = append(cmdArgs, "-debug")
 
 		if args.ProxyHost != "" {
 			cmdArgs = append(cmdArgs, "-proxyHost", args.ProxyHost)
 			cmdArgs = append(cmdArgs, "-proxyPort", strconv.Itoa(args.ProxyPort))
-
 			if args.ProxyUsername != "" {
 				cmdArgs = append(cmdArgs, "-proxyUser", args.ProxyUsername)
 			}
-
 			if args.ProxyPassword != "" {
 				cmdArgs = append(cmdArgs, "-proxyPass", args.ProxyPassword)
 			}
@@ -384,33 +412,13 @@ func startBotImpl(args startBotData) error {
 			cmd = exec.Command(cmdArgsWithSetsid[0], cmdArgsWithSetsid[1:]...)
 		}
 
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			fmt.Println("Error creating StdoutPipe for Cmd", err)
-			return
-		}
-
-		err = cmd.Start()
+		err := cmd.Start()
 		if err != nil {
 			fmt.Println("Error starting Cmd", err)
 			return
 		}
 
-		launcherPID := int32(cmd.Process.Pid)
-		pid := int(launcherPID)
-
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-
-		portMatch := 0
-		if args.AccountTotp != "" {
-			portMatch = clientPort
-		}
-
-		realPID, err := findRealClientPID(ctx, launcherPID, userhome, portMatch)
-		if err == nil && realPID != 0 {
-			pid = int(realPID)
-		}
+		pid := cmd.Process.Pid
 
 		totp := ""
 		if args.AccountTotp != "" {
@@ -420,59 +428,93 @@ func startBotImpl(args startBotData) error {
 		_ = NewClient(pid, args.InternalId, "Starting", args.ScriptName, clientPort, args.AccountUsername, args.AccountPassword, totp)
 		log.Println(args.AccountUsername, "has been detected as "+Yellow+"starting"+Reset+".")
 
-		done := make(chan error, 1)
-		lines := make(chan string)
+		logDir := botbuddyLogDir(args.ScriptsLocation, args.InternalId)
 
-		go func() {
-			scanner := bufio.NewScanner(stdout)
-			for scanner.Scan() {
-				lines <- scanner.Text()
-			}
-			close(lines)
-		}()
+		lines := make(chan string, 2000)
+		logCtx, cancelLogs := context.WithCancel(context.Background())
+		defer cancelLogs()
 
-		go func() {
-			done <- cmd.Wait()
-		}()
+		waitCtx, waitCancel := context.WithCancel(context.Background())
+		defer waitCancel()
 
-		finished := false
+		currentPath, currentMod, err := waitForNewestLogFile(waitCtx, logDir, 5*time.Minute)
+		if err != nil {
+			log.Println("Error waiting for new log files:", err)
+			cancelLogs()
+			RemoveClientByInternalId(args.InternalId)
+			sendProcessExitNotification(Master, args.InternalId, args.AccountUsername, args.ScriptName)
+			return
+		}
 
-		for !finished {
+		tailCtx, tailCancel := context.WithCancel(logCtx)
+		go func(p string) {
+			_ = tailSpecificFileFromEnd(tailCtx, p, lines)
+		}(currentPath)
+
+		lastActivity := time.Now()
+		lastSeenMod := currentMod
+
+		inactivityLimit := 60 * time.Second
+		poll := time.NewTicker(500 * time.Millisecond)
+		defer poll.Stop()
+
+		for {
 			select {
-			case <-done:
-				finished = true
-				break
-			case line, ok := <-lines:
-				if !ok {
-					finished = true
-					break
-				}
+			case line := <-lines:
+				lastActivity = time.Now()
+				//log.Printf("[BOT %d] %s", args.InternalId, line)
+
 				if len(logHandlers) > 0 {
 					for _, l := range logHandlers {
 						if strings.Contains(strings.ToLower(line), strings.ToLower(l.waitingFor)) && (args.ScriptName == l.scriptName || l.scriptName == "botbuddy_system") {
 							err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName, totp)
 							if err != nil {
-								go func() {
-									success := false
-									for !success {
+								go func(line string, totp string) {
+									for {
 										time.Sleep(time.Second)
 										err := l.action.execute(Master, args.InternalId, args.AccountUsername, line, args.ScriptName, totp)
 										if err == nil {
-											success = true
+											return
 										}
 									}
-								}()
+								}(line, totp)
 								continue
 							}
 						}
 					}
 				}
-				break
+
+			case <-poll.C:
+				newestPath, newestMod, err := latestFileInDir(logDir)
+				if err == nil && newestPath != "" {
+					if newestPath != currentPath {
+						tailCancel()
+						currentPath = newestPath
+						lastSeenMod = newestMod
+						lastActivity = time.Now()
+
+						tailCtx, tailCancel = context.WithCancel(logCtx)
+						go func(p string) {
+							_ = tailSpecificFileFromEnd(tailCtx, p, lines)
+						}(currentPath)
+					} else {
+						if newestMod.After(lastSeenMod) {
+							lastSeenMod = newestMod
+							lastActivity = time.Now()
+						}
+					}
+				}
+
+				if time.Since(lastActivity) >= inactivityLimit {
+					log.Printf("[BOT %d] stopping due to log inactivity >= %s", args.InternalId, inactivityLimit)
+					tailCancel()
+					cancelLogs()
+					RemoveClientByInternalId(args.InternalId)
+					sendProcessExitNotification(Master, args.InternalId, args.AccountUsername, args.ScriptName)
+					return
+				}
 			}
 		}
-
-		RemoveClientByInternalId(args.InternalId)
-		sendProcessExitNotification(Master, args.InternalId, args.AccountUsername, args.ScriptName)
 	}(args)
 
 	return nil
@@ -626,7 +668,7 @@ func linkJagexMailTm(_ net.Conn, data string) error {
 	port := client.Port
 	email := client.LoginName
 	password := client.LoginPass
-	mailTmPass := strings.Split(client.LoginTotp, ":")[1] // format is "mailtm:password"
+	mailTmPass := strings.Split(client.LoginTotp, ":")[1]
 
 	cmdInstallDrissionpage := exec.Command("pip", "install", "DrissionPage==4.1.0.0b2")
 	err = cmdInstallDrissionpage.Run()
@@ -678,51 +720,85 @@ func linkJagexMailTm(_ net.Conn, data string) error {
 	return nil
 }
 
-func findRealClientPID(ctx context.Context, launcherPID int32, userhome string, debugPort int) (int32, error) {
-	userhomeNeedle := "-userhome " + userhome
-	portNeedle := ""
-	if debugPort > 0 {
-		portNeedle = "-remote-debugging-port=" + strconv.Itoa(debugPort)
+func dreambotRootFromScriptsLocation(scriptsLocation string) string {
+	return filepath.Clean(filepath.Join(scriptsLocation, ".."))
+}
+
+func botbuddyLogDir(scriptsLocation string, internalID int) string {
+	root := dreambotRootFromScriptsLocation(scriptsLocation)
+	return filepath.Join(root, "Logs", "BotBuddy", strconv.Itoa(internalID))
+}
+
+func latestFileInDir(dir string) (string, time.Time, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", time.Time{}, err
 	}
 
-	deadline := time.Now().Add(20 * time.Second)
-	for time.Now().Before(deadline) {
+	var bestPath string
+	var bestMod time.Time
+
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		mod := info.ModTime()
+		if bestPath == "" || mod.After(bestMod) {
+			bestMod = mod
+			bestPath = filepath.Join(dir, e.Name())
+		}
+	}
+
+	if bestPath == "" {
+		return "", time.Time{}, errors.New("no files in log dir")
+	}
+	return bestPath, bestMod, nil
+}
+
+func tailFileFromEnd(ctx context.Context, path string, lines chan<- string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	_, err = f.Seek(0, io.SeekEnd)
+	if err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(f)
+	buf := make([]byte, 0, 4096)
+
+	for {
 		select {
 		case <-ctx.Done():
-			return 0, ctx.Err()
+			return ctx.Err()
 		default:
 		}
 
-		procs, _ := process.Processes()
-		var best int32
-		for _, p := range procs {
-			cmdline, err := p.Cmdline()
-			if err != nil || cmdline == "" {
+		b, err := reader.ReadByte()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				time.Sleep(150 * time.Millisecond)
 				continue
 			}
-			lc := strings.ToLower(cmdline)
-			if !strings.Contains(lc, strings.ToLower(userhomeNeedle)) {
-				continue
-			}
-			if portNeedle != "" && !strings.Contains(lc, strings.ToLower(portNeedle)) {
-				continue
-			}
-
-			ppid, _ := p.Ppid()
-			if ppid == launcherPID {
-				return p.Pid, nil
-			}
-
-			if best == 0 {
-				best = p.Pid
-			}
+			return err
 		}
 
-		if best != 0 {
-			return best, nil
+		if b == '\n' {
+			if len(buf) > 0 && buf[len(buf)-1] == '\r' {
+				buf = buf[:len(buf)-1]
+			}
+			lines <- string(buf)
+			buf = buf[:0]
+			continue
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		buf = append(buf, b)
 	}
-	return 0, errors.New("real client pid not found")
 }
