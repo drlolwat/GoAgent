@@ -1,11 +1,5 @@
 # GoAgent
 
-Build (Linux):
-```
-go build -o goagent -ldflags "-s -w -X main.CLIENT_UUID=<YOUR_CLIENT_UUID> -X main.CLIENT_KEY=<YOUR_CLIENT_KEY>" .
-```
+This GitHub repository is archived and read-only.
 
-Build (Windows):
-```
-GOOS=windows GOARCH=amd64 go build -o goagent.exe -ldflags "-s -w -X main.CLIENT_UUID=<YOUR_CLIENT_UUID> -X main.CLIENT_KEY=<YOUR_CLIENT_KEY>" .
-```
+The maintained repository is [lolwat/GoAgent on Flamel Git](https://git.flamel.dev/lolwat/GoAgent).
